@@ -48,22 +48,19 @@ class _HealthStepsState extends State<HealthSteps> {
     final auth = await health.requestAuthorization([HealthDataType.STEPS],
         permissions: [HealthDataAccess.READ]);
 
-    final auth2 = await health.requestAuthorization([HealthDataType.STEPS]);
-
     final now = DateTime.now();
     List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
         types: [HealthDataType.STEPS],
         startTime: DateTime(now.year, now.month, now.day, 0, 0, 0),
         endTime: DateTime.now());
 
-    // final c = await Health().isHealthDataHistoryAvailable();
-    final f = await health.isHealthConnectAvailable();
+    // final f = await health.isHealthConnectAvailable();
 
-    // final activityStatus = await Permission.activityRecognition.request();
-    if (!auth || healthData.isNotEmpty) {
+    if (!auth) {
       setState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
     } else {
-      setState(() => _status = 'Access granted ${Random().nextInt(999)}');
+      setState(() => _status =
+          'Access granted (RND${Random().nextInt(999)})\n. Found ${healthData.length} steps entries');
     }
     return;
   }
