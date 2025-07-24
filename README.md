@@ -1,3 +1,5 @@
 # step_up
 
-A new Flutter project.
+
+# Build
+Requires a android/app/google-services.json from firebase
