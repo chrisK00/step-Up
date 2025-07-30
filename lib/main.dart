@@ -51,8 +51,9 @@ class SignInWidget extends StatelessWidget {
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      // bearer token
+      final idToken = await userCredential.user!.getIdToken(false);
 
-      debugPrint("Signed in successfully: ${userCredential.user?.displayName}");
       return userCredential;
     } catch (e) {
       debugPrint("ERROR: $e");
