@@ -15,36 +15,72 @@ void main() async {
 class MainApp extends StatelessWidget {
   const MainApp({super.key});
 
+  Future signOut() async {
+    try {
+      await GoogleSignIn.instance.signOut();
+      await FirebaseAuth.instance.signOut();
+    } catch (e) {
+      debugPrint("ERROR: $e");
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-        home: Scaffold(
-      appBar: AppBar(
-        title: const Text("step up"),
-      ),
-      body: Center(
-        child: StreamBuilder<User?>(
-          stream: FirebaseAuth.instance.authStateChanges(),
-          builder: (context, userSnapshot) {
-            if (userSnapshot.connectionState == ConnectionState.waiting) {
-              return const Center(child: CircularProgressIndicator());
-            }
+      title: "Step Up",
+      home: StreamBuilder<User?>(
+        stream: FirebaseAuth.instance.authStateChanges(),
+        builder: (context, userSnapshot) {
+          if (userSnapshot.connectionState == ConnectionState.waiting) {
+            return const Center(child: CircularProgressIndicator());
+          }
 
-            if (userSnapshot.hasData) {
-              return const HealthStepsWidget();
-            }
-
-            return SignInWidget();
-          },
-        ),
+          return Scaffold(
+              appBar: AppBar(
+                  title: Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  const Text("Step Up"),
+                  if (userSnapshot.hasData)
+                    ElevatedButton.icon(
+                      label: const Text("Sign Out"),
+                      icon: const Icon(FontAwesomeIcons.signOut),
+                      onPressed: signOut,
+                    )
+                ],
+              )),
+              body: Center(child: userSnapshot.hasData ? const HealthStepsWidget() : SignInWidget()));
+        },
       ),
-    ));
+    );
   }
 }
 
 class SignInWidget extends StatelessWidget {
-  final auth = FirebaseAuth.instance;
-  final googleSignIn = GoogleSignIn.instance;
+  final _firebaseAuth = FirebaseAuth.instance;
+  final _googleSignIn = GoogleSignIn.instance;
+
+  SignInWidget({super.key});
+
+  Future<UserCredential> signInWithGoogle() async {
+    try {
+      await _googleSignIn.initialize();
+      final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
+      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
+      final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
+      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+
+      // bearer token
+      final idToken = await userCredential.user!.getIdToken(false);
+
+      return userCredential;
+    } catch (e) {
+      debugPrint("ERROR: $e");
+      _firebaseAuth.signOut();
+      await _googleSignIn.signOut();
+      throw FirebaseException(plugin: "Google");
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -54,24 +90,5 @@ class SignInWidget extends StatelessWidget {
             label: const Text("Sign in"), icon: const Icon(FontAwesomeIcons.google), onPressed: signInWithGoogle)
       ],
     );
-  }
-
-  Future<UserCredential> signInWithGoogle() async {
-    try {
-      await googleSignIn.initialize();
-      final GoogleSignInAccount googleUser = await GoogleSignIn.instance.authenticate();
-      final GoogleSignInAuthentication googleAuth = googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
-      // bearer token
-      final idToken = await userCredential.user!.getIdToken(false);
-
-      return userCredential;
-    } catch (e) {
-      debugPrint("ERROR: $e");
-      auth.signOut();
-      await googleSignIn.signOut();
-      throw FirebaseException(plugin: "Google");
-    }
   }
 }
