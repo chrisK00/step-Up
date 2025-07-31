@@ -66,6 +66,7 @@ analysis_benchmark.json
 .packages.generated
 
 # Flutter/Dart/Pub related
+firebase_options.dart
 **/doc/api/
 .dart_tool/
 .flutter-plugins-dependencies

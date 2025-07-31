@@ -1,13 +1,10 @@
-import 'dart:math';
-
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
-import 'package:health/health.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:step_up/firebase_options.dart';
+import 'package:step_up/health_steps_widget.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -21,12 +18,27 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      home: Scaffold(
-        body: Center(
-          child: SignInWidget(),
+        home: Scaffold(
+      appBar: AppBar(
+        title: const Text("step up"),
+      ),
+      body: Center(
+        child: StreamBuilder<User?>(
+          stream: FirebaseAuth.instance.authStateChanges(),
+          builder: (context, userSnapshot) {
+            if (userSnapshot.connectionState == ConnectionState.waiting) {
+              return const Center(child: CircularProgressIndicator());
+            }
+
+            if (userSnapshot.hasData) {
+              return const HealthStepsWidget();
+            }
+
+            return SignInWidget();
+          },
         ),
       ),
-    );
+    ));
   }
 }
 
@@ -36,7 +48,7 @@ class SignInWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
+    return Column(
       children: [
         ElevatedButton.icon(
             label: const Text("Sign in"), icon: const Icon(FontAwesomeIcons.google), onPressed: signInWithGoogle)
@@ -61,55 +73,5 @@ class SignInWidget extends StatelessWidget {
       await googleSignIn.signOut();
       throw FirebaseException(plugin: "Google");
     }
-  }
-}
-
-class HealthStepsWidget extends StatefulWidget {
-  const HealthStepsWidget({super.key});
-
-  @override
-  State<HealthStepsWidget> createState() => _HealthStepsWidgetState();
-}
-
-class _HealthStepsWidgetState extends State<HealthStepsWidget> {
-  String _status = 'Initializing...';
-  final health = Health();
-
-  @override
-  void initState() {
-    super.initState();
-    _initHealth();
-  }
-
-  Future<void> _initHealth() async {
-    await health.configure();
-    // Request activity recognition permission (Android)
-    final b = await Permission.location.request();
-    final a = await Permission.activityRecognition.request();
-    final auth = await health.requestAuthorization([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
-
-    final now = DateTime.now();
-    List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
-        types: [HealthDataType.STEPS],
-        startTime: DateTime(now.year, now.month, now.day, 0, 0, 0),
-        endTime: DateTime.now());
-
-    // final f = await health.isHealthConnectAvailable();
-
-    if (!auth) {
-      setState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
-    } else {
-      setState(
-          () => _status = 'Access granted (RND${Random().nextInt(999)})\n. Found ${healthData.length} steps entries');
-    }
-    return;
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: const Color(0xFFFFE306),
-      child: Text(_status),
-    );
   }
 }
