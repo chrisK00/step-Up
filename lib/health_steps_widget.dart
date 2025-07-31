@@ -33,25 +33,26 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     // TODO This method may block if permissions are already granted. Hence, check [hasPermissions] before calling this method.
     final auth = await _health.requestAuthorization([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
 
+    if (!auth) {
+      setState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
+      return;
+    }
+
     final now = DateTime.now();
     List<HealthDataPoint> healthData = await _health.getHealthDataFromTypes(
         types: [HealthDataType.STEPS],
         startTime: DateTime(now.year, now.month, now.day, 0, 0, 0),
         endTime: DateTime.now());
+    final totalSteps = healthData.fold<num>(0, (sum, point) => sum + (point.value as NumericHealthValue).numericValue);
 
-    if (!auth) {
-      setState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
-    } else {
-      setState(
-          () => _status = 'Access granted (RND${Random().nextInt(999)})\n Found ${healthData.length} steps entries');
-    }
+    setState(() => _status =
+        'Access granted (RND${Random().nextInt(999)})\nFound ${healthData.length} steps entries and ${totalSteps.toInt()} steps!');
 
 // TODO api request send my steps for today
-    return;
   }
 
 // TODO API request to fetch friends steps once i have sent my steps for today
-// TODO create a background job to report the steps every X, and when opening this screen ofc
+// TODO create a background job to report the steps every X, and when opening this screen ofc (får såklart ha någon form av refresh time så man ej spammar steg)
   @override
   Widget build(BuildContext context) {
     return Container(
