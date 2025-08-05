@@ -1,7 +1,7 @@
 ﻿
 namespace stepUp.Api.Domains.Authentication;
 
-public class LoginService : ILoginService
+internal class LoginService : ILoginService
 {
     public Task SignUpAsync(SignUpRequest request)
     {
