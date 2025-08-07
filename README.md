@@ -10,6 +10,9 @@ Requires a
 
 ## Backend .NET 8 Minimal Web API
 - Requires a *secrets/firebase-service-account.json* from firebase
+- Requires the following app configuration to be provided
+dotnet user-secrets init
+dotnet user-secrets set "testToken" "<password>"
 
 # Developing
 ## Frontend

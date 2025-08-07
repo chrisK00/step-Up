@@ -5,8 +5,6 @@ namespace stepUp.Api.Middleware;
 
 public class FirebaseAuthMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next = next;
-
     public async Task InvokeAsync(HttpContext context)
     {
         string? authHeader = context.Request.Headers.Authorization;
@@ -35,6 +33,6 @@ public class FirebaseAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        await _next(context);
+        await next(context);
     }
 }
