@@ -25,6 +25,7 @@ app.UseWhen(context =>
 {
     var testHeader = context.Request.Headers[AuthConstants.TestTokenAuthHeader].FirstOrDefault();
     var config = context.RequestServices.GetRequiredService<IConfiguration>();
+
     return string.IsNullOrEmpty(testHeader) || testHeader != config[AuthConstants.ConfigTestTokenKey];
 }, builder => builder.UseMiddleware<FirebaseAuthMiddleware>());
 
@@ -35,39 +36,26 @@ app.MapPost("users", async (HttpContext context, SignUpRequest request, ILoginSe
     var requestWithUserId = request with { UserId = context.GetUserId() };
 
     await loginService.SignUpAsync(requestWithUserId);
+
     return Results.CreatedAtRoute($"/users/{requestWithUserId.UserId}");
 });
 
-app.MapPost("steps", async (HttpContext context, AddDailyStepsRequest request, ILoginService loginService) =>
+var steps = app.MapGroup("steps");
+
+steps.MapPost(string.Empty, async (HttpContext context, AddDailyStepsRequest request, IStepsService stepsService, CancellationToken cancellation) =>
 {
     var requestWithUserId = request with { UserId = context.GetUserId() };
+    await stepsService.AddDailySteps(requestWithUserId, cancellation);
 
-    //await loginService.SignUpAsync(requestWithUserId);
-    //return Results.CreatedAtRoute($"/users/{requestWithUserId.UserId}");
+    return Results.Created();
+});
 
-    // TODO testa sql som genereras
+steps.MapGet(string.Empty, async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+{
+    var userId = context.GetUserId();
+    var dailySteps = await stepsService.GetDailySteps(userId, cancellation);
 
-    //var result = await dbContext.AppUsers
-    //.Select(user => new
-    //{
-    //    user.UserId,
-    //    user.FirstName,
-    //    Steps = dbContext.DailyStepEntries
-    //        .Where(e => e.UserId == user.UserId)
-    //        .Select(e => new { e.Date, e.Steps })
-    //        .ToList()
-    //})
-    //.ToListAsync();
-
-    // bör bli
-    //    SELECT
-    //    u.UserId, 
-    //    u.FirstName,
-    //    s.Date,
-    //    s.Steps
-    //FROM AppUsers u
-    //LEFT JOIN DailyStepEntries s ON s.UserId = u.UserId
-
+    return Results.Ok(dailySteps);
 });
 
 app.Run();

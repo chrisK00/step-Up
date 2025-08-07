@@ -3,6 +3,7 @@ using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
 using stepUp.Api.Data;
 using stepUp.Api.Domains.Authentication;
+using stepUp.Api.Domains.Steps;
 using stepUp.Api.Utils;
 
 namespace stepUp.Api.Extensions;
@@ -19,7 +20,10 @@ public static class ServiceCollectionExtensions
         services.AddEndpointsApiExplorer();
         services.AddSwaggerGen();
 
+        services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ILoginService, LoginService>();
+        services.AddScoped<IStepsService, StepsService>();
+
         services.AddDbContext<AppDbContext>(options => options.UseSqlite("Data Source=App.db"));
 
         FirebaseApp.Create(new AppOptions()
