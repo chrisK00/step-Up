@@ -2,5 +2,5 @@
 
 public interface ILoginService
 {
-    Task SignUpAsync(SignUpRequest request);
+    Task SignUpAsync(SignUpRequest request, CancellationToken cancellation);
 }

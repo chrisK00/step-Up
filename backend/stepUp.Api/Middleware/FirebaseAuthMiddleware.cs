@@ -19,9 +19,17 @@ public class FirebaseAuthMiddleware(RequestDelegate next)
         try
         {
             var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(authHeader);
+            if (!decodedToken.Claims.TryGetValue("email", out var emailClaimValue) || emailClaimValue is not string email)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Incomplete claims");
+                return;
+            }
+
             var claims = new List<Claim>
                 {
                    new(ClaimTypes.NameIdentifier, decodedToken.Uid),
+                   new(ClaimTypes.Email, email),
                 };
 
             context.User = new ClaimsPrincipal(new ClaimsIdentity(claims));

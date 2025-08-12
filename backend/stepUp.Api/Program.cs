@@ -31,11 +31,19 @@ app.UseWhen(context =>
 
 app.MapGet("health", () => Results.Ok());
 
-app.MapPost("users", async (HttpContext context, SignUpRequest request, ILoginService loginService) =>
+app.MapPost("users", async (HttpContext context, SignUpRequest request, ILoginService loginService, CancellationToken cancellation) =>
 {
-    var requestWithUserId = request with { UserId = context.GetUserId() };
+    var requestWithUserId = request with { UserId = context.GetUserId(), Email = context.GetEmail() };
 
-    await loginService.SignUpAsync(requestWithUserId);
+    try
+    {
+        await loginService.SignUpAsync(requestWithUserId, cancellation);
+    }
+    catch (UserExistsException ex)
+    {
+
+        return Results.BadRequest(ex.Message);
+    }
 
     return Results.CreatedAtRoute($"/users/{requestWithUserId.UserId}");
 });
