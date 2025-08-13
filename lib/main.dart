@@ -5,6 +5,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:step_up/firebase_options.dart';
 import 'package:step_up/health_steps_widget.dart';
+import 'package:step_up/step_up_api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -62,23 +63,20 @@ class SignInWidget extends StatelessWidget {
 
   SignInWidget({super.key});
 
-  Future<UserCredential> signInWithGoogle() async {
+  Future<void> signInWithGoogle() async {
     try {
       await _googleSignIn.initialize();
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
-      final userCredential = await _firebaseAuth.signInWithCredential(credential);
+      await _firebaseAuth.signInWithCredential(credential);
 
-      // bearer token
-      final idToken = await userCredential.user!.getIdToken(false);
-
-      return userCredential;
+      final currentUser = FirebaseAuth.instance.currentUser;
+      await StepUpApiService.signUp(currentUser!.displayName!);
     } catch (e) {
       debugPrint("ERROR: $e");
       _firebaseAuth.signOut();
       await _googleSignIn.signOut();
-      throw FirebaseException(plugin: "Google");
     }
   }
 
