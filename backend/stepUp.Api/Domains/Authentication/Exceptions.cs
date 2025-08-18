@@ -3,5 +3,5 @@
 [Serializable]
 public class UserExistsException : Exception
 {
-    public UserExistsException() : base("Invalid Email") { }
+    public UserExistsException() : base("Invalid Email or Username") { }
 }

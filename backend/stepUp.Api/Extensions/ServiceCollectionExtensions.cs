@@ -24,7 +24,14 @@ public static class ServiceCollectionExtensions
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<IStepsService, StepsService>();
 
-        services.AddDbContext<AppDbContext>(options => options.UseSqlite("Data Source=App.db"));
+        services.AddDbContext<AppDbContext>(options =>
+        {
+            options.UseSqlite("Data Source=App.db");
+#if DEBUG
+            options.EnableSensitiveDataLogging();
+            options.LogTo(Console.WriteLine, LogLevel.Information);
+#endif
+        });
 
         FirebaseApp.Create(new AppOptions()
         {

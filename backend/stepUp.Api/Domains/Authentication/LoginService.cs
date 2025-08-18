@@ -9,7 +9,7 @@ internal class LoginService(AppDbContext dbContext, IUnitOfWork unitOfWork) : IL
 {
     public async Task SignUpAsync(SignUpRequest request, CancellationToken cancellation)
     {
-        var userExists = await dbContext.Users.AnyAsync(u => u.UserId == request.UserId || u.Email == request.Email, cancellation);
+        var userExists = await dbContext.Users.AnyAsync(u => u.UserId == request.UserId || u.Email == request.Email || u.FirstName == request.FirstName, cancellation);
         if (userExists)
         {
             throw new UserExistsException();

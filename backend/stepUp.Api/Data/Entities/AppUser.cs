@@ -1,7 +1,9 @@
-﻿using System.ComponentModel.DataAnnotations;
+﻿using Microsoft.EntityFrameworkCore;
+using System.ComponentModel.DataAnnotations;
 
 namespace stepUp.Api.Data.Entities;
 
+[Index(nameof(FirstName), IsUnique = true)]
 public class AppUser
 {
     [Key]

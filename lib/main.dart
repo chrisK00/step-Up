@@ -4,7 +4,7 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:step_up/firebase_options.dart';
-import 'package:step_up/health_steps_widget.dart';
+import 'package:step_up/steps/health_steps_widget.dart';
 import 'package:step_up/step_up_api_service.dart';
 
 void main() async {
@@ -71,6 +71,7 @@ class SignInWidget extends StatelessWidget {
       final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
       await _firebaseAuth.signInWithCredential(credential);
 
+      // TODO add username select screen and handle username is taken / error messages
       final currentUser = FirebaseAuth.instance.currentUser;
       await StepUpApiService.signUp(currentUser!.displayName!);
     } catch (e) {

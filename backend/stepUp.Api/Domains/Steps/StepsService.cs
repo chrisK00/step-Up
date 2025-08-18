@@ -26,33 +26,14 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 
     public async Task<IReadOnlyCollection<GetDailyStepsResponse>> GetDailySteps(string userId, CancellationToken cancellation)
     {
-        return await dbContext.DailyStepEntries.AsNoTracking()
-            .Where(x => x.UserId == userId && x.Date == DateOnly.FromDateTime(DateTime.Today))
-            .Select(x => new GetDailyStepsResponse(x.Steps, x.Date, x.UserId))
-            .ToListAsync(cancellation);
+        var today = DateOnly.FromDateTime(DateTime.Today);
 
-        // TODO get friends steps
-        // get steps
-        // TODO testa sql som genereras
-        //var result = await dbContext.AppUsers
-        //.Select(user => new
-        //{
-        //    user.UserId,
-        //    user.FirstName,
-        //    Steps = dbContext.DailyStepEntries
-        //        .Where(e => e.UserId == user.UserId)
-        //        .Select(e => new { e.Date, e.Steps })
-        //        .ToList()
-        //})
-        //.ToListAsync();
-
-        // bör bli
-        //    SELECT
-        //    u.UserId, 
-        //    u.FirstName,
-        //    s.Date,
-        //    s.Steps
-        //FROM AppUsers u
-        //LEFT JOIN DailyStepEntries s ON s.UserId = u.UserId
+        // TODO get friends steps instead of just current userid
+        return await (from s in dbContext.DailyStepEntries.AsNoTracking()
+                      join u in dbContext.Users.AsNoTracking()
+                      on s.UserId equals u.UserId
+                      where s.UserId == userId && s.Date == today
+                      select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId, u.FirstName))
+                            .ToListAsync(cancellation);
     }
 }

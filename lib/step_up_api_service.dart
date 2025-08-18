@@ -3,6 +3,7 @@ import 'dart:convert';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
+import 'package:step_up/steps/daily_steps.dart';
 
 class StepUpApiService {
   static const String _apiUrl = 'http://10.0.2.2:5208';
@@ -42,11 +43,11 @@ class StepUpApiService {
     }
   }
 
-  static Future<List<Map<String, dynamic>>?> fetchSteps() async {
+  static Future<List<DailySteps>?> fetchSteps() async {
     try {
       final response = await http.get(Uri.parse('$_apiUrl/steps'), headers: {'Authorization': await getToken()});
-      final steps = (jsonDecode(response.body) as List).map((e) => e as Map<String, dynamic>).toList();
-      return steps;
+      final List<dynamic> jsonData = jsonDecode(response.body);
+      return jsonData.map((e) => DailySteps.fromJson(e)).toList();
     } catch (e) {
       debugPrint('HTTP Error: $e');
       return null;
