@@ -4,6 +4,7 @@ namespace stepUp.Api.Domains.Steps;
 
 public interface IStepsService
 {
-    public Task AddDailySteps(AddDailyStepsRequest request, CancellationToken cancellation);
-    Task<IReadOnlyCollection<GetDailyStepsResponse>> GetDailySteps(string userId, CancellationToken cancellation);
+    public Task AddDailyStepsAsync(AddDailyStepsRequest request, CancellationToken cancellation);
+    Task<IReadOnlyCollection<GetDailyStepsResponse>> GetDailyStepsAsync(string userId, CancellationToken cancellation);
+    Task<IReadOnlyCollection<GetDailyStepsResponse>> GetFriendsDailyStepsAsync(string userId, CancellationToken cancellation);
 }

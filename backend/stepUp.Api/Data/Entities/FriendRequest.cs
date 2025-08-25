@@ -6,5 +6,7 @@ public class FriendRequest
     // when returning friendreqs sort sentdate by desc
     public string FromUserId { get; set; }
     public string ToUserId { get; set; }
-    public DateTime SentDate { get; set; }
+
+    // TODO rename SentDateTime
+    public DateTime SentDate { get; set; } = DateTime.Now;
 }

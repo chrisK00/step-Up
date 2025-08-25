@@ -3,6 +3,8 @@ using Google.Apis.Auth.OAuth2;
 using Microsoft.EntityFrameworkCore;
 using stepUp.Api.Data;
 using stepUp.Api.Domains.Authentication;
+using stepUp.Api.Domains.FriendRequests;
+using stepUp.Api.Domains.Friendships;
 using stepUp.Api.Domains.Steps;
 using stepUp.Api.Utils;
 
@@ -23,6 +25,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ILoginService, LoginService>();
         services.AddScoped<IStepsService, StepsService>();
+        services.AddScoped<IFriendRequestService, FriendRequestService>();
+        services.AddScoped<IFriendshipService, FriendshipService>();
 
         services.AddDbContext<AppDbContext>(options =>
         {
