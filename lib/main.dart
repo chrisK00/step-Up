@@ -4,17 +4,33 @@ import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:step_up/firebase_options.dart';
+import 'package:step_up/friends/friends_widget.dart';
 import 'package:step_up/steps/health_steps_widget.dart';
 import 'package:step_up/step_up_api_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  runApp(const MainApp());
+  runApp(const MainAppState());
 }
 
-class MainApp extends StatelessWidget {
-  const MainApp({super.key});
+class MainAppState extends StatefulWidget {
+  const MainAppState({super.key});
+
+  @override
+  State<MainAppState> createState() => _MainAppState();
+}
+
+class _MainAppState extends State<MainAppState> {
+  final primaryColor = const Color.fromARGB(255, 211, 248, 211);
+  final backgroundColor = const Color.fromARGB(255, 242, 242, 242);
+  final iconColor = const Color.fromARGB(255, 75, 88, 75);
+
+  int currentPageIndex = 0;
+  final List<Widget> pages = [
+    const HealthStepsWidget(),
+    const FriendsWidgetState(),
+  ];
 
   Future signOut() async {
     try {
@@ -28,6 +44,15 @@ class MainApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      theme: ThemeData(
+        elevatedButtonTheme: ElevatedButtonThemeData(
+            style: ElevatedButton.styleFrom(
+          foregroundColor: iconColor,
+          // backgroundColor: Colors.white,
+        )),
+        secondaryHeaderColor: const Color.fromARGB(255, 242, 242, 242),
+        scaffoldBackgroundColor: backgroundColor,
+      ),
       title: "Step Up",
       home: StreamBuilder<User?>(
         stream: FirebaseAuth.instance.authStateChanges(),
@@ -37,22 +62,47 @@ class MainApp extends StatelessWidget {
           }
 
           return Scaffold(
-              appBar: AppBar(
-                  title: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  const Text("Step Up"),
-                  if (userSnapshot.hasData)
-                    ElevatedButton.icon(
-                      label: const Text("Sign Out"),
-                      icon: const Icon(FontAwesomeIcons.signOut),
-                      onPressed: signOut,
-                    )
-                ],
-              )),
-              body: Center(child: userSnapshot.hasData ? const HealthStepsWidget() : SignInWidget()));
+            appBar: AppBar(
+                backgroundColor: const Color.fromARGB(255, 242, 242, 242),
+                title: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    const Text("Step Up"),
+                    if (userSnapshot.hasData)
+                      ElevatedButton.icon(
+                        label: const Text("Sign Out"),
+                        icon: const Icon(FontAwesomeIcons.signOut),
+                        onPressed: signOut,
+                      )
+                  ],
+                )),
+            body: Center(child: userSnapshot.hasData ? pages[currentPageIndex] : SignInWidget()),
+            bottomNavigationBar: userSnapshot.hasData ? navBar() : null,
+          );
         },
       ),
+    );
+  }
+
+  NavigationBar navBar() {
+    return NavigationBar(
+      backgroundColor: primaryColor,
+      indicatorColor: const Color.fromARGB(255, 177, 207, 177),
+      onDestinationSelected: (int index) {
+        if (!mounted) return;
+        setState(() => currentPageIndex = index);
+      },
+      selectedIndex: currentPageIndex,
+      destinations: const [
+        NavigationDestination(
+          icon: Icon(FontAwesomeIcons.house),
+          label: 'Home',
+        ),
+        NavigationDestination(
+          icon: Icon(FontAwesomeIcons.userGroup),
+          label: 'Friends',
+        ),
+      ],
     );
   }
 }

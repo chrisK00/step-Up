@@ -106,6 +106,7 @@ friendRequests.MapPost("accept", async (AcceptFriendRequest request, HttpContext
 
 friendRequests.MapDelete(string.Empty, async ([Guid] string otherUserId, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
 {
+    // TODO mb just use a scoped userservice that caches in scope the userid
     var requestWithUserId = new DeleteFriendRequest(context.GetUserId(), otherUserId);
     var result = await friendRequestService.DeleteFriendRequestAsync(requestWithUserId, cancellation);
 

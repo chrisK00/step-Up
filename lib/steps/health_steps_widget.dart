@@ -21,6 +21,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   List<DailySteps> _usersDailySteps = [DailySteps(firstName: "a", steps: 2500, userId: "x")]; // TODO
   var _status = 'Loading...';
   final _health = Health();
+  bool _isDisposed = false;
 
   @override
   void initState() {
@@ -38,7 +39,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     final auth = await _health.requestAuthorization([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
 
     if (!auth) {
-      setState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
+      safeSetState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
       return;
     }
 
@@ -53,7 +54,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     final updateStepsResponse = await StepUpApiService.postSteps(totalSteps);
     final steps = await StepUpApiService.fetchSteps();
 
-    setState(() {
+    safeSetState(() {
       _usersDailySteps = steps ?? [];
       _status =
           'Access granted (RND${Random().nextInt(999)})\nFound ${healthData.length} steps entries and ${totalSteps.toInt()} steps!';
@@ -66,7 +67,6 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   Widget build(BuildContext context) {
     return Container(
       alignment: Alignment.center,
-      color: const Color.fromARGB(255, 255, 255, 255),
       child: Column(
         children: [
           Text(_status),
@@ -83,5 +83,16 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
         ],
       ),
     );
+  }
+
+  @override
+  void dispose() {
+    _isDisposed = true;
+    super.dispose();
+  }
+
+  void safeSetState(VoidCallback fn) {
+    if (_isDisposed || !mounted) return;
+    setState(fn);
   }
 }
