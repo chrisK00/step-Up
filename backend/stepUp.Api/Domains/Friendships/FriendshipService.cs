@@ -29,6 +29,7 @@ internal class FriendshipService(AppDbContext dbContext, IUnitOfWork unitOfWork)
          let friendId = f.UserId == userId ? f.FriendId : f.UserId
          join u in dbContext.Users.AsNoTracking()
              on friendId equals u.UserId
+         orderby u.FirstName
          select new GetFriendshipsResponse(u.UserId.ToString(), u.FirstName))
          .ToListAsync(cancellation);
     }

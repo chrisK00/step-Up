@@ -8,6 +8,7 @@ class FriendsWidgetState extends StatefulWidget {
   State<FriendsWidgetState> createState() => _FriendsWidgetState();
 }
 
+// TODO en knapp med copy your username to clipboard
 class _FriendsWidgetState extends State<FriendsWidgetState> {
   final _usernameController = TextEditingController();
 

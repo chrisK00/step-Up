@@ -51,6 +51,7 @@ internal class FriendRequestService(AppDbContext dbContext, IUnitOfWork unitOfWo
         };
 
         return await query
+            .OrderByDescending(fr => fr.SentDate)
             .Select(fr => new GetFriendRequestsResponse(fr.FromUserId, fr.ToUserId, fr.SentDate))
             .ToListAsync(cancellation);
     }

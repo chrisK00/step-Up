@@ -6,6 +6,7 @@ using stepUp.Api.Domains.Authentication;
 using stepUp.Api.Domains.FriendRequests;
 using stepUp.Api.Domains.Friendships;
 using stepUp.Api.Domains.Steps;
+using stepUp.Api.Domains.Users;
 using stepUp.Api.Utils;
 
 namespace stepUp.Api.Extensions;
@@ -24,6 +25,7 @@ public static class ServiceCollectionExtensions
 
         services.AddScoped<IUnitOfWork, UnitOfWork>();
         services.AddScoped<ILoginService, LoginService>();
+        services.AddScoped<IUserService, UserService>();
         services.AddScoped<IStepsService, StepsService>();
         services.AddScoped<IFriendRequestService, FriendRequestService>();
         services.AddScoped<IFriendshipService, FriendshipService>();

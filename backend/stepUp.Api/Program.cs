@@ -3,9 +3,11 @@ using stepUp.Api.Domains.Authentication;
 using stepUp.Api.Domains.FriendRequests;
 using stepUp.Api.Domains.Friendships;
 using stepUp.Api.Domains.Steps;
+using stepUp.Api.Domains.Users;
 using stepUp.Api.Extensions;
 using stepUp.Api.Middleware;
 using stepUp.Api.Utils;
+using System.ComponentModel.DataAnnotations;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -34,7 +36,10 @@ app.UseWhen(context =>
 
 app.MapGet("health", () => Results.Ok()).WithTags("Misc");
 
-app.MapPost("users", async (SignUpRequest request, HttpContext context, ILoginService loginService, CancellationToken cancellation) =>
+var users = app.MapGroup("users")
+    .WithTags("Users"); ;
+
+users.MapPost(string.Empty, async (SignUpRequest request, HttpContext context, ILoginService loginService, CancellationToken cancellation) =>
 {
     var requestWithUserId = request with { UserId = context.GetUserId(), Email = context.GetEmail() };
 
@@ -46,12 +51,24 @@ app.MapPost("users", async (SignUpRequest request, HttpContext context, ILoginSe
     catch (UserExistsException ex)
     {
 
-        return Results.BadRequest(ex.Message);
+        return TypedResults.BadRequest(ex.Message);
     }
 
     return Results.CreatedAtRoute($"/users/{requestWithUserId.UserId}");
-})
-    .WithTags("Users");
+});
+
+users.MapGet(string.Empty, async ([FromQuery, Required] string username, IUserService userService, CancellationToken cancellation) =>
+{
+    // TODO needed at other places, add guards/fix data annotation validation
+    if (string.IsNullOrWhiteSpace(username))
+    {
+        return Results.BadRequest($"{nameof(username)} is required");
+    }
+
+    var request = new SearchUsersRequest(username);
+    var users = await userService.SearchUsersAsync(request, cancellation);
+    return TypedResults.Ok(users);
+});
 
 var steps = app.MapGroup("steps")
     .WithTags("Steps"); ;
@@ -68,14 +85,14 @@ steps.MapGet(string.Empty, async (HttpContext context, IStepsService stepsServic
 {
     var dailySteps = await stepsService.GetDailyStepsAsync(context.GetUserId(), cancellation);
 
-    return Results.Ok(dailySteps);
+    return TypedResults.Ok(dailySteps);
 });
 
 steps.MapGet("friends", async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
     var dailySteps = await stepsService.GetFriendsDailyStepsAsync(context.GetUserId(), cancellation);
 
-    return Results.Ok(dailySteps);
+    return TypedResults.Ok(dailySteps);
 });
 
 var friendRequests = app.MapGroup("friend-requests")
@@ -85,7 +102,7 @@ friendRequests.MapPost(string.Empty, async (SendFriendRequest request, HttpConte
     var requestWithUserId = request with { UserId = context.GetUserId() };
     var result = await friendRequestService.SendFriendRequestAsync(requestWithUserId, cancellation);
 
-    return result.Success ? Results.Created() : Results.BadRequest(result.Error);
+    return result.Success ? Results.Created() : TypedResults.BadRequest(result.Error);
 });
 
 friendRequests.MapGet(string.Empty, async ([FromQuery] FriendRequestType friendRequestType, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
@@ -93,7 +110,7 @@ friendRequests.MapGet(string.Empty, async ([FromQuery] FriendRequestType friendR
     var requestWithUserId = new GetFriendRequests(context.GetUserId(), friendRequestType);
     var friendRequests = await friendRequestService.GetFriendRequestsAsync(requestWithUserId, cancellation);
 
-    return Results.Ok(friendRequests);
+    return TypedResults.Ok(friendRequests);
 });
 
 friendRequests.MapPost("accept", async (AcceptFriendRequest request, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
@@ -101,7 +118,7 @@ friendRequests.MapPost("accept", async (AcceptFriendRequest request, HttpContext
     var requestWithUserId = request with { UserId = context.GetUserId() };
     var result = await friendRequestService.AcceptFriendRequestAsync(requestWithUserId, cancellation);
 
-    return result.Success ? Results.Created() : Results.BadRequest(result.Error);
+    return result.Success ? Results.Created() : TypedResults.BadRequest(result.Error);
 });
 
 friendRequests.MapDelete(string.Empty, async ([Guid] string otherUserId, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
@@ -110,7 +127,7 @@ friendRequests.MapDelete(string.Empty, async ([Guid] string otherUserId, HttpCon
     var requestWithUserId = new DeleteFriendRequest(context.GetUserId(), otherUserId);
     var result = await friendRequestService.DeleteFriendRequestAsync(requestWithUserId, cancellation);
 
-    return result.Success ? Results.NoContent() : Results.BadRequest(result.Error);
+    return result.Success ? Results.NoContent() : TypedResults.BadRequest(result.Error);
 });
 
 var friends = app.MapGroup("friends")
@@ -120,7 +137,7 @@ friends.MapGet(string.Empty, async (HttpContext context, IFriendshipService frie
 {
     var friendships = await friendshipService.GetFriendshipsAsync(context.GetUserId(), cancellation);
 
-    return Results.Ok(friendships);
+    return TypedResults.Ok(friendships);
 });
 
 friends.MapDelete(string.Empty, async (string friendId, HttpContext context, IFriendshipService friendshipService, CancellationToken cancellation) =>
@@ -128,7 +145,7 @@ friends.MapDelete(string.Empty, async (string friendId, HttpContext context, IFr
     var requestWithUserId = new DeleteFriendshipRequest(context.GetUserId(), friendId);
     var result = await friendshipService.DeleteFriendshipAsync(requestWithUserId, cancellation);
 
-    return result.Success ? Results.NoContent() : Results.BadRequest(result.Error);
+    return result.Success ? Results.NoContent() : TypedResults.BadRequest(result.Error);
 });
 
 // TODO testa endpoints + validations
