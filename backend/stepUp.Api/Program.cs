@@ -8,8 +8,18 @@ using stepUp.Api.Extensions;
 using stepUp.Api.Middleware;
 using stepUp.Api.Utils;
 using System.ComponentModel.DataAnnotations;
+using System.Text.Json.Serialization;
 
 var builder = WebApplication.CreateBuilder(args);
+
+builder.Services.ConfigureHttpJsonOptions(options =>
+
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter())
+);
+builder.Services.Configure<JsonOptions>(options =>
+
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
+);
 
 builder.Services.AddAppServices(builder.Configuration);
 
@@ -121,7 +131,7 @@ friendRequests.MapPost("accept", async (AcceptFriendRequest request, HttpContext
     return result.Success ? Results.Created() : TypedResults.BadRequest(result.Error);
 });
 
-friendRequests.MapDelete(string.Empty, async ([Guid] string otherUserId, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
+friendRequests.MapDelete("{otherUserId}", async ([Required(AllowEmptyStrings = false)] string otherUserId, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
 {
     // TODO mb just use a scoped userservice that caches in scope the userid
     var requestWithUserId = new DeleteFriendRequest(context.GetUserId(), otherUserId);
@@ -140,7 +150,7 @@ friends.MapGet(string.Empty, async (HttpContext context, IFriendshipService frie
     return TypedResults.Ok(friendships);
 });
 
-friends.MapDelete(string.Empty, async (string friendId, HttpContext context, IFriendshipService friendshipService, CancellationToken cancellation) =>
+friends.MapDelete("{friendId}", async (string friendId, HttpContext context, IFriendshipService friendshipService, CancellationToken cancellation) =>
 {
     var requestWithUserId = new DeleteFriendshipRequest(context.GetUserId(), friendId);
     var result = await friendshipService.DeleteFriendshipAsync(requestWithUserId, cancellation);

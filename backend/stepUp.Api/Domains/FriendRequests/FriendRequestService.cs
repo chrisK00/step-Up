@@ -7,7 +7,7 @@ using stepUp.Api.Utils;
 namespace stepUp.Api.Domains.FriendRequests;
 
 internal class FriendRequestService(AppDbContext dbContext, IUnitOfWork unitOfWork) : IFriendRequestService
-{    
+{
     public async Task<CommandResult> AcceptFriendRequestAsync(AcceptFriendRequest request, CancellationToken cancellation)
     {
         var friendRequest = await dbContext.FriendRequests.SingleOrDefaultAsync(fr => fr.FromUserId == request.FromUserId && fr.ToUserId == request.UserId, cancellation);
@@ -50,10 +50,18 @@ internal class FriendRequestService(AppDbContext dbContext, IUnitOfWork unitOfWo
             _ => throw new NotImplementedException(),
         };
 
-        return await query
+        // TODO kolla rätt query genereras join
+        var queryable = query
             .OrderByDescending(fr => fr.SentDate)
-            .Select(fr => new GetFriendRequestsResponse(fr.FromUserId, fr.ToUserId, fr.SentDate))
-            .ToListAsync(cancellation);
+            .Join(dbContext.Users, fr => fr.FromUserId, u => u.UserId, (fr, fromUser) => new { fr, fromUser })
+            .Join(dbContext.Users,
+            frAndFromUser => frAndFromUser.fr.ToUserId,
+            u => u.UserId,
+            (frAndFromUser, toUser) =>
+            new GetFriendRequestsResponse(frAndFromUser.fr.FromUserId, frAndFromUser.fromUser.FirstName, toUser.FirstName, frAndFromUser.fr.ToUserId, frAndFromUser.fr.SentDate));
+
+        //var q = queryable.ToQueryString();
+        return await queryable.ToListAsync(cancellation);
     }
 
     public async Task<CommandResult> SendFriendRequestAsync(SendFriendRequest request, CancellationToken cancellation)
@@ -67,7 +75,9 @@ internal class FriendRequestService(AppDbContext dbContext, IUnitOfWork unitOfWo
                                                                                             || (fr.ToUserId == request.UserId && fr.FromUserId == request.ToUserId),
                                                                                              cancellation);
 
-        if ((await FriendshipExists(request.UserId, request.ToUserId, cancellation)) || existingFriendRequest != null)
+        var friendshipExists = await FriendshipExists(request.UserId, request.ToUserId, cancellation);
+
+        if (friendshipExists || existingFriendRequest != null)
         {
             return CommandResult.Fail("Friend or friend request exists");
         }

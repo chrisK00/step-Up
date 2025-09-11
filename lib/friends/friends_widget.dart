@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
+import 'package:step_up/friends/models.dart';
+import 'package:step_up/step_up_api_service.dart';
 
 class FriendsWidgetState extends StatefulWidget {
   const FriendsWidgetState({super.key});
@@ -11,17 +13,29 @@ class FriendsWidgetState extends StatefulWidget {
 // TODO en knapp med copy your username to clipboard
 class _FriendsWidgetState extends State<FriendsWidgetState> {
   final _usernameController = TextEditingController();
+  List<FriendRequestsResponse> friendRequests = [];
+  List<FriendsResponse> friends = [];
+  List<FriendRequestsResponse> sentFriendRequests = [];
+
+  @override
+  void initState() {
+    super.initState();
+    initFriendRequests();
+    initSentFriendRequests();
+    initFriends();
+  }
 
   @override
   Widget build(BuildContext context) {
-    // TODO: implement build
+    final theme = Theme.of(context);
+
     return Padding(
       padding: const EdgeInsetsGeometry.all(16),
       child: Column(children: [
         Row(
           children: [
             Expanded(child: TextField(controller: _usernameController)),
-            IconButton(onPressed: () => {}, icon: Icon(FontAwesomeIcons.plus))
+            IconButton(onPressed: sendFriendRequest, icon: const Icon(FontAwesomeIcons.plus))
           ],
         ),
         const SizedBox(height: 20),
@@ -29,28 +43,103 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
           children: [
             ExpansionPanel(
               isExpanded: true,
-              headerBuilder: (context, isOpen) => const ListTile(title: Text("Friend Requests (2)")),
-              body: const Column(
-                children: [ListTile(title: Text("Req1")), ListTile(title: Text("Req2"))],
-              ),
+              headerBuilder: (context, isOpen) => ListTile(title: Text("Friend Requests (${friendRequests.length})")),
+              body: Column(
+                  // TODO in backend include fromUserName
+                  children: friendRequests.map((fr) => createFriendRequestTile(fr, theme)).toList()),
             ),
             ExpansionPanel(
               isExpanded: true,
-              headerBuilder: (context, isOpen) => const ListTile(title: Text("Friends (1)")),
-              body: const Column(
-                children: [ListTile(title: Text("Friend1"))],
+              headerBuilder: (context, isOpen) => ListTile(title: Text("Friends (${friends.length})")),
+              body: Column(
+                children: friends.map((fr) => createFriendTile(fr, theme)).toList(),
               ),
             ),
             ExpansionPanel(
-              isExpanded: false,
-              headerBuilder: (context, isOpen) => const ListTile(title: Text("Sent Friend Requests (0)")),
-              body: const Column(
-                children: [],
-              ),
-            )
+              isExpanded: true, // TODO default false
+              headerBuilder: (context, isOpen) =>
+                  ListTile(title: Text("Sent Friend Requests (${sentFriendRequests.length})")),
+              body: Column(children: sentFriendRequests.map((fr) => createSentFriendRequestTile(fr, theme)).toList()),
+            ),
           ],
         )
       ]),
     );
+  }
+
+  ListTile createFriendRequestTile(FriendRequestsResponse fr, ThemeData theme) {
+    return ListTile(
+        title: Text(fr.fromUsername),
+        trailing: IconButton(
+            onPressed: () => acceptFriendRequest(fr.fromUserId),
+            icon: Icon(
+              FontAwesomeIcons.check,
+              color: theme.primaryColorLight,
+            )));
+  }
+
+  ListTile createSentFriendRequestTile(FriendRequestsResponse fr, ThemeData theme) {
+    return ListTile(
+        title: Text(fr.fromUsername),
+        trailing: IconButton(
+            onPressed: () => (),
+            icon: const Icon(
+              FontAwesomeIcons.remove,
+              color: Colors.red,
+            )));
+  }
+
+// TODO borde använda template för alal är typ samma förutom icon mm
+  ListTile createFriendTile(FriendsResponse fr, ThemeData theme) {
+    return ListTile(
+        title: Text(fr.username),
+        trailing: IconButton(
+            onPressed: () async => await deleteFriendship(fr),
+            icon: const Icon(
+              FontAwesomeIcons.remove,
+              color: Colors.red,
+            )));
+  }
+
+  Future<void> initFriendRequests() async {
+    final fr = await StepUpApiService.getFriendRequests(FriendRequestType.incoming);
+
+    setState(() => friendRequests = fr ?? []);
+    // friendRequests = [
+    //   FriendRequestsResponse(
+    //       fromUserId: "1", toUserId: "2", fromUsername: "aaa", toUsername: "bb", sentDateTime: DateTime(2000, 1, 1)),
+    // ];
+  }
+
+  Future<void> deleteFriendship(FriendsResponse friendResponse) async {
+    await StepUpApiService.deleteFriendship(friendResponse.id);
+
+    setState(() => friends.remove(friendResponse));
+  }
+
+  Future<void> initSentFriendRequests() async {
+    final sfr = await StepUpApiService.getFriendRequests(FriendRequestType.outgoing);
+
+    setState(() => sentFriendRequests = sfr ?? []);
+  }
+
+  Future<void> initFriends() async {
+    final frs = await StepUpApiService.getFriends();
+
+    setState(() => friends = frs ?? []);
+  }
+
+  Future<void> sendFriendRequest() async {
+    final foundUsers = await StepUpApiService.searchUsers(_usernameController.text);
+    if (foundUsers == null || foundUsers.isEmpty) {
+      return;
+    }
+
+    await StepUpApiService.sendFriendRequest(foundUsers.first.id);
+    _usernameController.text = "";
+  }
+
+  Future<void> acceptFriendRequest(String fromUserId) async {
+    await StepUpApiService.acceptFriendRequest(fromUserId);
   }
 }

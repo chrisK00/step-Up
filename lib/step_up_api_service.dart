@@ -7,12 +7,29 @@ import 'package:step_up/friends/models.dart';
 import 'package:step_up/header_builder.dart';
 import 'package:step_up/steps/daily_steps.dart';
 
+extension StringCasingExtension on String {
+  String toTitleCase() {
+    if (isEmpty) return this;
+
+    return split(RegExp(r'\s+')).map((word) {
+      if (word.isEmpty) return word;
+      return word[0].toUpperCase() + word.substring(1).toLowerCase();
+    }).join(' ');
+  }
+}
+
+extension EnumToStringExtension on Enum {
+  String get asString => toString().split('.').last;
+}
+
+enum FriendRequestType { incoming, outgoing }
+
 class StepUpApiService {
   static const String _apiUrl = 'http://10.0.2.2:5208';
-  static const String _usersEndpoint = '${_apiUrl}users';
-  static const String _friendRequestsEndpoint = '${_apiUrl}friend-requests';
-  static const String _friendshipsEndpoint = '${_apiUrl}friends';
-  static const String _stepsEndpoint = '${_apiUrl}steps';
+  static const String _usersEndpoint = '$_apiUrl/users';
+  static const String _friendRequestsEndpoint = '$_apiUrl/friend-requests';
+  static const String _friendshipsEndpoint = '$_apiUrl/friends';
+  static const String _stepsEndpoint = '$_apiUrl/steps';
 
   static Future<http.Response?> postSteps(
     num totalSteps,
@@ -43,7 +60,7 @@ class StepUpApiService {
     }
   }
 
-  static Future<List<DailySteps>?> fetchSteps() async {
+  static Future<List<DailySteps>?> getSteps() async {
     try {
       final response = await http.get(Uri.parse(_stepsEndpoint), headers: (await HeaderBuilder().auth()).build());
       final List<dynamic> jsonData = jsonDecode(response.body);
@@ -68,8 +85,9 @@ class StepUpApiService {
 
   static Future sendFriendRequest(String toUserId) async {
     try {
+      final body = jsonEncode({"toUserId": toUserId});
       await http.post(Uri.parse(_friendRequestsEndpoint),
-          headers: (await HeaderBuilder().jsonContent().auth()).build(), body: jsonEncode({"toUserId": toUserId}));
+          headers: (await HeaderBuilder().jsonContent().auth()).build(), body: body);
     } catch (e) {
       debugPrint('HTTP Error: $e');
     }
@@ -91,8 +109,8 @@ class StepUpApiService {
     // delete
   }
 
-  static Future<List<FriendRequestsResponse>?> getFriendRequests() async {
-    final url = Uri.parse(_friendRequestsEndpoint);
+  static Future<List<FriendRequestsResponse>?> getFriendRequests(FriendRequestType frType) async {
+    final url = Uri.parse("$_friendRequestsEndpoint?friendRequestType=${frType.asString.toTitleCase()}");
 
     try {
       final response = await http.get(url, headers: (await HeaderBuilder().auth()).build());
@@ -117,9 +135,26 @@ class StepUpApiService {
     }
   }
 
-  static Future deleteFriendship() async {
-    final url = Uri.parse(_friendshipsEndpoint);
+  static Future deleteFriendship(String userId) async {
+    final url = Uri.parse("$_friendshipsEndpoint/$userId");
     final headers = (await HeaderBuilder().auth()).build();
-//delete
+
+    try {
+      final response = await http.delete(url, headers: headers);
+    } catch (e) {
+      debugPrint('HTTP Error: $e');
+    }
+  }
+
+  static Future<List<DailySteps>?> getFriendsSteps() async {
+    try {
+      final response =
+          await http.get(Uri.parse("$_stepsEndpoint/friends"), headers: (await HeaderBuilder().auth()).build());
+      final List<dynamic> jsonData = jsonDecode(response.body);
+      return jsonData.map((e) => DailySteps.fromJson(e)).toList();
+    } catch (e) {
+      debugPrint('HTTP Error: $e');
+      return null;
+    }
   }
 }

@@ -52,10 +52,13 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     final totalSteps = healthData.fold<num>(0, (sum, point) => sum + (point.value as NumericHealthValue).numericValue);
 
     final updateStepsResponse = await StepUpApiService.postSteps(totalSteps);
-    final steps = await StepUpApiService.fetchSteps();
+    final steps = await StepUpApiService.getSteps();
+
+    final friendsSteps = await StepUpApiService.getFriendsSteps();
 
     safeSetState(() {
       _usersDailySteps = steps ?? [];
+      _usersDailySteps.addAll(friendsSteps ?? []);
       _status =
           'Access granted (RND${Random().nextInt(999)})\nFound ${healthData.length} steps entries and ${totalSteps.toInt()} steps!';
     });

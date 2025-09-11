@@ -14,16 +14,25 @@ class UsersSearchResponse {
 
 class FriendRequestsResponse {
   final String fromUserId;
+  final String fromUsername;
+  final String toUsername;
   final String toUserId;
   final DateTime sentDateTime;
 
-  FriendRequestsResponse({required this.fromUserId, required this.toUserId, required this.sentDateTime});
+  FriendRequestsResponse(
+      {required this.fromUserId,
+      required this.toUserId,
+      required this.fromUsername,
+      required this.toUsername,
+      required this.sentDateTime});
 
   factory FriendRequestsResponse.fromJson(Map<String, dynamic> json) {
     return FriendRequestsResponse(
       fromUserId: json['fromUserId'],
-      toUserId: json["id"],
-      sentDateTime: json["sentDateTime"],
+      toUserId: json["toUserId"],
+      fromUsername: json["fromUsername"],
+      toUsername: json["toUsername"],
+      sentDateTime: DateTime.parse(json["sentDateTime"]),
     );
   }
 }
@@ -36,7 +45,7 @@ class FriendsResponse {
 
   factory FriendsResponse.fromJson(Map<String, dynamic> json) {
     return FriendsResponse(
-      id: json['fromUserId'],
+      id: json['userId'],
       username: json["firstName"],
     );
   }

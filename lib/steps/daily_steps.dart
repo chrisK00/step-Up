@@ -9,7 +9,7 @@ class DailySteps {
     return DailySteps(
       firstName: json['firstName'],
       steps: json['steps'],
-      userId: "//TODO",
+      userId: json["userId"],
     );
   }
 }
