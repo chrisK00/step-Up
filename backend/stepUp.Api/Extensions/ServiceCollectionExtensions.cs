@@ -32,7 +32,7 @@ public static class ServiceCollectionExtensions
 
         services.AddDbContext<AppDbContext>(options =>
         {
-            options.UseSqlite("Data Source=App.db");
+            options.UseSqlite($"Data Source={Path.Combine(AppContext.BaseDirectory, "App.db")}");
 #if DEBUG
             options.EnableSensitiveDataLogging();
             options.LogTo(Console.WriteLine, LogLevel.Information);
