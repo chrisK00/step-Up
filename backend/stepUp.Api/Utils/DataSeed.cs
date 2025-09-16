@@ -10,6 +10,8 @@ public static class DataSeed
     {
         using var scope = serviceProvider.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+        var logger = scope.ServiceProvider.GetRequiredService<ILogger>();
+        logger.LogError("SQLite DB Path: {ConnectionString}", db.Database.GetConnectionString());
 
         await db.Database.MigrateAsync();
 

@@ -31,7 +31,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IFriendshipService, FriendshipService>();
 
         services.AddDbContext<AppDbContext>(options =>
-        {
+        {            
             options.UseSqlite($"Data Source={Path.Combine(AppContext.BaseDirectory, "App.db")}");
 #if DEBUG
             options.EnableSensitiveDataLogging();
