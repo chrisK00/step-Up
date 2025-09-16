@@ -21,6 +21,7 @@ builder.Services.Configure<JsonOptions>(options =>
     options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
 );
 
+builder.Logging.AddConsole();
 builder.Configuration.AddEnvironmentVariables();
 
 builder.Services.AddAppServices(builder.Configuration);
