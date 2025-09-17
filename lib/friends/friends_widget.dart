@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:step_up/friends/models.dart';
 import 'package:step_up/step_up_api_service.dart';
@@ -80,7 +81,7 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
 
   ListTile createSentFriendRequestTile(FriendRequestsResponse fr, ThemeData theme) {
     return ListTile(
-        title: Text(fr.fromUsername),
+        title: Text(fr.toUsername),
         trailing: IconButton(
             onPressed: () => (),
             icon: const Icon(
@@ -132,6 +133,7 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
   Future<void> sendFriendRequest() async {
     final foundUsers = await StepUpApiService.searchUsers(_usernameController.text);
     if (foundUsers == null || foundUsers.isEmpty) {
+      Fluttertoast.showToast(msg: 'The user was not found');
       return;
     }
 

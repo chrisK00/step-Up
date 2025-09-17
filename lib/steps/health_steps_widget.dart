@@ -3,6 +3,7 @@ import 'dart:math';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
@@ -18,7 +19,7 @@ class HealthStepsWidget extends StatefulWidget {
 }
 
 class _HealthStepsWidgetState extends State<HealthStepsWidget> {
-  List<DailySteps> _usersDailySteps = [DailySteps(firstName: "a", steps: 2500, userId: "x")]; // TODO
+  List<DailySteps> _usersDailySteps = [];
   var _status = 'Loading...';
   final _health = Health();
   bool _isDisposed = false;
@@ -59,8 +60,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     safeSetState(() {
       _usersDailySteps = steps ?? [];
       _usersDailySteps.addAll(friendsSteps ?? []);
-      _status =
-          'Access granted (RND${Random().nextInt(999)})\nFound ${healthData.length} steps entries and ${totalSteps.toInt()} steps!';
+      _status = '';
     });
   }
 
@@ -80,7 +80,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
                     final userSteps = _usersDailySteps[index];
                     return ListTile(
                       title: Text(userSteps.firstName),
-                      subtitle: Text(userSteps.steps.toString()),
+                      subtitle: Text('${userSteps.steps} steps'),
                     );
                   }))
         ],

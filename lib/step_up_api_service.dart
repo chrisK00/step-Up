@@ -2,6 +2,7 @@ import 'dart:convert';
 
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:step_up/friends/models.dart';
 import 'package:step_up/header_builder.dart';
@@ -42,6 +43,7 @@ class StepUpApiService {
 
       return response;
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
     }
@@ -57,6 +59,7 @@ class StepUpApiService {
             'FirstName': displayName,
           }));
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
     }
   }
@@ -67,6 +70,7 @@ class StepUpApiService {
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => DailySteps.fromJson(e)).toList();
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
     }
@@ -79,6 +83,7 @@ class StepUpApiService {
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => UsersSearchResponse.fromJson(e)).toList();
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
     }
@@ -89,7 +94,9 @@ class StepUpApiService {
       final body = jsonEncode({"toUserId": toUserId});
       await http.post(Uri.parse(_friendRequestsEndpoint),
           headers: (await HeaderBuilder().jsonContent().auth()).build(), body: body);
+      Fluttertoast.showToast(msg: 'Sent friend request');
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
     }
   }
@@ -100,6 +107,7 @@ class StepUpApiService {
       await http.post(url,
           headers: (await HeaderBuilder().jsonContent().auth()).build(), body: jsonEncode({"fromUserId": fromUserId}));
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
     }
   }
@@ -118,6 +126,7 @@ class StepUpApiService {
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => FriendRequestsResponse.fromJson(e)).toList();
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
     }
@@ -131,6 +140,7 @@ class StepUpApiService {
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => FriendsResponse.fromJson(e)).toList();
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
     }
@@ -143,6 +153,7 @@ class StepUpApiService {
     try {
       final response = await http.delete(url, headers: headers);
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
     }
   }
@@ -154,6 +165,7 @@ class StepUpApiService {
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => DailySteps.fromJson(e)).toList();
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
     }

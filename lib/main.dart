@@ -7,6 +7,7 @@ import 'package:step_up/firebase_options.dart';
 import 'package:step_up/friends/friends_widget.dart';
 import 'package:step_up/steps/health_steps_widget.dart';
 import 'package:step_up/step_up_api_service.dart';
+import 'package:fluttertoast/fluttertoast.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -37,6 +38,7 @@ class _MainAppState extends State<MainAppState> {
       await GoogleSignIn.instance.signOut();
       await FirebaseAuth.instance.signOut();
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
     }
   }
@@ -125,6 +127,7 @@ class SignInWidget extends StatelessWidget {
       final currentUser = FirebaseAuth.instance.currentUser;
       await StepUpApiService.signUp(currentUser!.displayName!);
     } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
       _firebaseAuth.signOut();
       await _googleSignIn.signOut();
