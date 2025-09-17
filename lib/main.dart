@@ -18,7 +18,6 @@ void main() async {
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
   await Workmanager().initialize(SendDailyStepsJob.callbackDispatcher);
 
-// TODO kommer nog inte ha valid token alltför länge? kanske bg job som refreshar hela tiden o har en statisk instans av token
   final currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser != null) {
     final idToken = await currentUser.getIdToken();
