@@ -1,15 +1,10 @@
-import 'dart:convert';
 import 'dart:math';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:fluttertoast/fluttertoast.dart';
-import 'package:font_awesome_flutter/font_awesome_flutter.dart';
-import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
-import 'package:permission_handler/permission_handler.dart';
 import 'package:step_up/step_up_api_service.dart';
 import 'package:step_up/steps/daily_steps.dart';
+import 'package:step_up/steps/health_helper.dart';
 
 class HealthStepsWidget extends StatefulWidget {
   const HealthStepsWidget({super.key});
@@ -31,28 +26,16 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   }
 
   Future<void> _initSteps() async {
-    await _health.configure();
-    // TODO handle declined
-    final locationPermissionStatus = await Permission.location.request();
-    final activityRecognitionPermissionStatus = await Permission.activityRecognition.request();
+    final authHealthResult = await HealthHelper.authenticateHealth(_health);
 
-    // TODO This method may block if permissions are already granted. Hence, check [hasPermissions] before calling this method.
-    final auth = await _health.requestAuthorization([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
-
-    if (!auth) {
+    if (!authHealthResult) {
       safeSetState(() => _status = 'Permission Denied: ${Random().nextInt(999)}');
       return;
     }
 
-    // TODO move this upon launching the app (opening the app should cause a steps refresh)
-    final now = DateTime.now();
-    List<HealthDataPoint> healthData = await _health.getHealthDataFromTypes(
-        types: [HealthDataType.STEPS],
-        startTime: DateTime(now.year, now.month, now.day, 0, 0, 0),
-        endTime: DateTime.now());
-    final totalSteps = healthData.fold<num>(0, (sum, point) => sum + (point.value as NumericHealthValue).numericValue);
+    final healthSteps = await HealthHelper.getStepsFromHealth(_health);
+    final updateStepsResponse = await StepUpApiService.postSteps(healthSteps);
 
-    final updateStepsResponse = await StepUpApiService.postSteps(totalSteps);
     final steps = await StepUpApiService.getSteps();
 
     final friendsSteps = await StepUpApiService.getFriendsSteps();

@@ -106,10 +106,6 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
     final fr = await StepUpApiService.getFriendRequests(FriendRequestType.incoming);
 
     setState(() => friendRequests = fr ?? []);
-    // friendRequests = [
-    //   FriendRequestsResponse(
-    //       fromUserId: "1", toUserId: "2", fromUsername: "aaa", toUsername: "bb", sentDateTime: DateTime(2000, 1, 1)),
-    // ];
   }
 
   Future<void> deleteFriendship(FriendsResponse friendResponse) async {

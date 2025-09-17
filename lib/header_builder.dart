@@ -20,5 +20,12 @@ class HeaderBuilder {
     return this;
   }
 
+  Future<HeaderBuilder> authWithToken(String? token) async {
+    token ??= await getToken();
+
+    _headers['Authorization'] = token;
+    return this;
+  }
+
   Map<String, String> build() => _headers;
 }

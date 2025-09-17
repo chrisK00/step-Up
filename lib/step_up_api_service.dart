@@ -1,6 +1,5 @@
 import 'dart:convert';
 
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
@@ -34,11 +33,12 @@ class StepUpApiService {
   static const String _stepsEndpoint = '$_apiUrl/steps';
 
   static Future<http.Response?> postSteps(
-    num totalSteps,
-  ) async {
+    num totalSteps, {
+    String? token,
+  }) async {
     try {
       var response = await http.post(Uri.parse(_stepsEndpoint),
-          headers: (await HeaderBuilder().jsonContent().auth()).build(),
+          headers: (await HeaderBuilder().jsonContent().authWithToken(token)).build(),
           body: jsonEncode(<String, num>{'steps': totalSteps}));
 
       return response;
