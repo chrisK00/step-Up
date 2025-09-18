@@ -18,7 +18,7 @@ class HealthStepsWidget extends StatefulWidget {
 class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   List<DailySteps> _usersDailySteps = [];
   var _status = 'Loading...';
-  var _secureStorage = 'Loading Secure storage...';
+  var _secureStorageMsg = 'Loading Secure storage...';
   Health _health = Health();
   bool _isDisposed = false;
 
@@ -34,9 +34,13 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     final k = await storage.read(key: "key");
     final e = await storage.read(key: "error");
 
-    setState(() {
-      _secureStorage = 'Key: $k\n Error: $e';
-    });
+    if ((k == null || k == '') && (e == null || e == '')) {
+      _secureStorageMsg = '';
+    } else {
+      setState(() {
+        _secureStorageMsg = 'Key: $k\n Error: $e';
+      });
+    }
   }
 
   Future<void> _initSteps() async {
@@ -73,7 +77,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
       alignment: Alignment.center,
       child: Column(
         children: [
-          Text(_secureStorage),
+          Text(_secureStorageMsg),
           Text(_status),
           Expanded(
               child: ListView.builder(

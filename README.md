@@ -16,6 +16,8 @@ dotnet user-secrets set "testToken" "<password>"
 
 # Developing
 ## Frontend
+Deploy:
+flutter build apk --split-per-abi
 
 
 ## Backend
