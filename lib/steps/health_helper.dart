@@ -4,12 +4,27 @@ import 'package:permission_handler/permission_handler.dart';
 class HealthHelper {
   static Future<bool> authenticateHealth(Health health) async {
     await health.configure();
-    // TODO handle declined
+
+    final healthDataInbackgroundPermissionStatus = await health.requestHealthDataInBackgroundAuthorization();
     final locationPermissionStatus = await Permission.location.request();
     final activityRecognitionPermissionStatus = await Permission.activityRecognition.request();
 
-    // TODO This method may block if permissions are already granted. Hence, check [hasPermissions] before calling this method.
+    final isHealthAvailable = await health.isHealthConnectAvailable();
+    final isHealthDataInBackgroundAvailable = await health.isHealthDataInBackgroundAuthorized();
+    final hasStepsPermission =
+        await health.hasPermissions([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
+
+    if (healthDataInbackgroundPermissionStatus &&
+        locationPermissionStatus.isGranted &&
+        activityRecognitionPermissionStatus.isGranted &&
+        isHealthAvailable &&
+        isHealthDataInBackgroundAvailable &&
+        (hasStepsPermission != null && hasStepsPermission)) {
+      return true;
+    }
+
     final auth = await health.requestAuthorization([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
+
     return auth;
   }
 

@@ -1,36 +1,97 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
 import 'package:step_up/firebase_options.dart';
 import 'package:step_up/friends/friends_widget.dart';
-import 'package:step_up/send_daily_steps_job.dart';
 import 'package:step_up/steps/health_helper.dart';
-import 'package:step_up/steps/health_steps_widget.dart';
 import 'package:step_up/step_up_api_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
+import 'package:step_up/steps/health_steps_widget.dart';
 import 'package:workmanager/workmanager.dart';
+
+const jobName = "sendDailyStepsJob";
+
+@pragma('vm:entry-point')
+void callbackDispatcher() {
+  Workmanager().executeTask((task, inputData) async {
+    debugPrint("Job running");
+
+    if (task != jobName) {
+      return true;
+    }
+
+    const storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: false));
+    String text = DateTime.now().toString();
+    await storage.write(key: "key", value: text);
+
+    final health = Health();
+
+    try {
+      final x = await health.isHealthDataInBackgroundAuthorized();
+      text += '\n isHealthDataInBackgroundAuthorized: $x';
+
+      WidgetsFlutterBinding.ensureInitialized();
+      await Firebase.initializeApp(options: DefaultFirebaseOptions.android);
+      final currentUser = FirebaseAuth.instance.currentUser!;
+
+      final idToken = await currentUser.getIdToken(true);
+      text += '\n Got id token';
+      await storage.write(key: "key", value: text);
+
+      final y = await health.isHealthConnectAvailable();
+      final yy = await health.hasPermissions([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
+
+      text += '\n Health available: $y  Has permission: $yy';
+      await storage.write(key: "key", value: text);
+      final healthSteps = await HealthHelper.getStepsFromHealth(health);
+
+      text += '\n  Sending Steps: $healthSteps';
+      await storage.write(key: "key", value: text);
+      final updateStepsResponse = await StepUpApiService.postSteps(healthSteps, token: idToken);
+
+      // await storage.write(
+      //     key: "error", value: 'No Errors. Statuscode from API ${updateStepsResponse!.statusCode.toString()}');
+
+      await storage.write(key: 'key', value: '');
+      debugPrint("Job ran");
+    } catch (e) {
+      await storage.write(key: 'key', value: text);
+      await storage.write(key: "error", value: e.toString());
+      debugPrint("Error during $jobName, $e");
+    }
+    return true;
+  });
+}
+
+Future<void> registerPeriodicTasks() async {
+  await Workmanager().registerPeriodicTask(jobName, jobName,
+      frequency: const Duration(minutes: 15),
+      existingWorkPolicy: ExistingPeriodicWorkPolicy.update,
+      constraints: Constraints(
+          requiresCharging: false,
+          requiresBatteryNotLow: false,
+          requiresDeviceIdle: false,
+          requiresStorageNotLow: false,
+          networkType: NetworkType.notRoaming));
+}
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
-  await Workmanager().initialize(SendDailyStepsJob.callbackDispatcher);
+  await Workmanager().initialize(callbackDispatcher);
 
   final currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser != null) {
-    final idToken = await currentUser.getIdToken();
-    HealthHelper.authenticateHealth(MainAppState.mainHealth);
+    final health = Health();
+    HealthHelper.authenticateHealth(health);
 
 // For testing
-    // await Workmanager().registerOneOffTask("hi1", SendDailyStepsJob.jobName,
-    //     initialDelay: Duration.zero, inputData: {"idToken": idToken});
-
-    await Workmanager().registerPeriodicTask(SendDailyStepsJob.jobName, SendDailyStepsJob.jobName,
-        frequency: const Duration(minutes: 30),
-        existingWorkPolicy: ExistingPeriodicWorkPolicy.replace,
-        inputData: {"idToken": idToken});
+    // await Workmanager().registerOneOffTask("unique", jobName, initialDelay: Duration.zero);
+    await registerPeriodicTasks();
   }
 
   runApp(const MainAppState());
@@ -38,7 +99,6 @@ void main() async {
 
 class MainAppState extends StatefulWidget {
   const MainAppState({super.key});
-  static var mainHealth = Health();
 
   @override
   State<MainAppState> createState() => _MainAppState();
@@ -60,7 +120,6 @@ class _MainAppState extends State<MainAppState> {
       await GoogleSignIn.instance.signOut();
       await FirebaseAuth.instance.signOut();
     } catch (e) {
-      MainAppState.mainHealth = Health();
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
     }
@@ -144,12 +203,16 @@ class SignInWidget extends StatelessWidget {
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
+      final gauthtoken = googleAuth.idToken;
       await _firebaseAuth.signInWithCredential(credential);
 
       // TODO add username select screen and handle username is taken / error messages
       final currentUser = FirebaseAuth.instance.currentUser;
       await StepUpApiService.signUp(currentUser!.displayName!);
-      await HealthHelper.authenticateHealth(MainAppState.mainHealth);
+
+      final health = Health();
+      await HealthHelper.authenticateHealth(health);
+      await registerPeriodicTasks();
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
