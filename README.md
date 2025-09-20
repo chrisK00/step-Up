@@ -19,6 +19,9 @@ dotnet user-secrets set "testToken" "<password>"
 Deploy:
 flutter build apk --split-per-abi
 
+Changing app icon:
+dart run flutter_launcher_icons
+
 
 ## Backend
 - Adding migrations:
