@@ -64,7 +64,7 @@ void callbackDispatcher() {
           value: 'Job ran successfully. Started: $start ended $end. Ran for ${end.difference(start).inSeconds}');
     } catch (e) {
       await storage.write(key: 'key', value: text);
-      await storage.write(key: "error", value: e.toString());
+      await storage.write(key: "error", value: '$start: $e');
       debugPrint("Error during $jobName, $e");
     }
     return true;
