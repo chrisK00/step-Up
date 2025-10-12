@@ -1,9 +1,5 @@
-import 'dart:math';
-
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:health/health.dart';
-import 'package:step_up/main.dart';
 import 'package:step_up/step_up_api_service.dart';
 import 'package:step_up/steps/daily_steps.dart';
 import 'package:step_up/steps/health_helper.dart';
@@ -17,8 +13,10 @@ class HealthStepsWidget extends StatefulWidget {
 
 class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   List<DailySteps> _usersDailySteps = [];
+  String? firstPlaceId = null; // TODO maybe sort on backend, and just pick out yourself/own endpoint
+  String? secondPlaceId = null;
   var _status = 'Loading...';
-  var _secureStorageMsg = 'Loading Secure storage...';
+
   Health _health = Health();
   bool _isDisposed = false;
 
@@ -26,21 +24,6 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   void initState() {
     super.initState();
     _initSteps();
-    secureStorage();
-  }
-
-  Future<void> secureStorage() async {
-    const storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: false));
-    final k = await storage.read(key: "key");
-    final e = await storage.read(key: "error");
-
-    if ((k == null || k == '') && (e == null || e == '')) {
-      _secureStorageMsg = '';
-    } else {
-      setState(() {
-        _secureStorageMsg = 'Key: $k\n Error: $e';
-      });
-    }
   }
 
   Future<void> _initSteps() async {
@@ -59,13 +42,19 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
       safeSetState(() => _status = '');
     }
 
-    final steps = await StepUpApiService.getSteps();
+    var steps = await StepUpApiService.getSteps();
+    steps ??= [];
+    var friendsSteps = await StepUpApiService.getFriendsSteps();
+    friendsSteps ??= [];
 
-    final friendsSteps = await StepUpApiService.getFriendsSteps();
+    final combinedList = [...steps, ...friendsSteps];
+    combinedList.sort((a, b) => b.steps.compareTo(a.steps));
+    firstPlaceId = combinedList.isNotEmpty ? combinedList[0].userId : null;
+    secondPlaceId = combinedList.length > 1 ? combinedList[1].userId : null;
 
     safeSetState(() {
-      _usersDailySteps = steps ?? [];
-      _usersDailySteps.addAll(friendsSteps ?? []);
+      _usersDailySteps = steps!;
+      _usersDailySteps.addAll(friendsSteps!);
     });
   }
 
@@ -77,15 +66,25 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
       alignment: Alignment.center,
       child: Column(
         children: [
-          Text(_secureStorageMsg),
           Text(_status),
           Expanded(
               child: ListView.builder(
                   itemCount: _usersDailySteps.length,
                   itemBuilder: (context, index) {
                     final userSteps = _usersDailySteps[index];
+
                     return ListTile(
-                      title: Text(userSteps.firstName),
+                      title: Row(
+                        children: [
+                          Text(userSteps.firstName.split(" ")[0]),
+                          const SizedBox(width: 5),
+                          userSteps.userId == firstPlaceId
+                              ? const Icon(Icons.emoji_events, color: Colors.amber)
+                              : userSteps.userId == secondPlaceId
+                                  ? const Icon(Icons.emoji_events, color: Colors.grey)
+                                  : const SizedBox.shrink(),
+                        ],
+                      ), // TODO remove once have usernames in place
                       subtitle: Text('${userSteps.steps} steps'),
                     );
                   }))

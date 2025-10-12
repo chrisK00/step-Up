@@ -7,6 +7,7 @@ import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
 import 'package:step_up/firebase_options.dart';
 import 'package:step_up/friends/friends_widget.dart';
+import 'package:step_up/settings/settings_widget.dart';
 import 'package:step_up/steps/health_helper.dart';
 import 'package:step_up/step_up_api_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
@@ -113,6 +114,7 @@ class _MainAppState extends State<MainAppState> {
   final List<Widget> pages = [
     const HealthStepsWidget(),
     const FriendsWidgetState(),
+    SettingsWidget(),
   ];
 
   Future signOut() async {
@@ -185,6 +187,10 @@ class _MainAppState extends State<MainAppState> {
         NavigationDestination(
           icon: Icon(FontAwesomeIcons.userGroup),
           label: 'Friends',
+        ),
+        NavigationDestination(
+          icon: Icon(FontAwesomeIcons.gear),
+          label: 'Settings',
         ),
       ],
     );
