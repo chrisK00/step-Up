@@ -26,7 +26,8 @@ void callbackDispatcher() {
     }
 
     const storage = FlutterSecureStorage(aOptions: AndroidOptions(encryptedSharedPreferences: false));
-    String text = DateTime.now().toString();
+    final start = DateTime.now();
+    String text = start.toString();
     await storage.write(key: "key", value: text);
 
     final health = Health();
@@ -57,8 +58,10 @@ void callbackDispatcher() {
       // await storage.write(
       //     key: "error", value: 'No Errors. Statuscode from API ${updateStepsResponse!.statusCode.toString()}');
 
-      await storage.write(key: 'key', value: '');
-      debugPrint("Job ran");
+      final end = DateTime.now();
+      await storage.write(
+          key: 'key',
+          value: 'Job ran successfully. Started: $start ended $end. Ran for ${end.difference(start).inSeconds}');
     } catch (e) {
       await storage.write(key: 'key', value: text);
       await storage.write(key: "error", value: e.toString());
