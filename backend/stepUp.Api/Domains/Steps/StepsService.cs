@@ -43,11 +43,15 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
         var friendsSteps = await (
             from f in dbContext.Friendships.AsNoTracking()
             let friendId = f.UserId == userId ? f.FriendId : f.UserId
+
             join s in dbContext.DailyStepEntries.AsNoTracking()
                 on friendId equals s.UserId
+            
             join u in dbContext.Users.AsNoTracking()
                 on friendId equals u.UserId
+            
             where (f.UserId == userId || f.FriendId == userId) && s.Date == today
+            orderby s.Steps descending
             select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId.ToString(), u.FirstName)
         ).ToListAsync(cancellation);
 
