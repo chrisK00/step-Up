@@ -34,7 +34,10 @@ class HealthHelper {
         types: [HealthDataType.STEPS],
         startTime: DateTime(now.year, now.month, now.day, 0, 0, 0),
         endTime: DateTime.now());
-    final totalSteps = healthData.fold<num>(0, (sum, point) => sum + (point.value as NumericHealthValue).numericValue);
+
+    var nonSystemHealthData = healthData.where((d) => d.sourceName != "android");
+    final totalSteps =
+        nonSystemHealthData.fold<num>(0, (sum, point) => sum + (point.value as NumericHealthValue).numericValue);
     return totalSteps;
   }
 }
