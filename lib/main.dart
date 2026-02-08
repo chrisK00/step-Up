@@ -219,7 +219,7 @@ class SignInWidget extends StatelessWidget {
       final currentUser = FirebaseAuth.instance.currentUser;
       final signUpResult = await StepUpApiService.signUp(currentUser!.displayName!);
 
-      if (signUpResult?.statusCode != 201) {
+      if (signUpResult == null || signUpResult.statusCode != 201) {
         Fluttertoast.showToast(msg: "${signUpResult?.reasonPhrase}");
         _firebaseAuth.signOut();
         await _googleSignIn.signOut();
