@@ -49,11 +49,11 @@ class StepUpApiService {
     }
   }
 
-  static Future<void> signUp(
+  static Future<http.Response?> signUp(
     String displayName,
   ) async {
     try {
-      await http.post(Uri.parse(_usersEndpoint),
+      return await http.post(Uri.parse(_usersEndpoint),
           headers: (await HeaderBuilder().jsonContent().auth()).build(),
           body: jsonEncode(<String, String>{
             'FirstName': displayName,
@@ -61,6 +61,7 @@ class StepUpApiService {
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
+      return null;
     }
   }
 
