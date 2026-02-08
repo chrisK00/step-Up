@@ -212,15 +212,14 @@ class SignInWidget extends StatelessWidget {
       final GoogleSignInAccount googleUser = await _googleSignIn.authenticate();
       final GoogleSignInAuthentication googleAuth = googleUser.authentication;
       final credential = GoogleAuthProvider.credential(idToken: googleAuth.idToken);
-      final gauthtoken = googleAuth.idToken;
       await _firebaseAuth.signInWithCredential(credential);
 
       // TODO add username select screen and handle username is taken / error messages
       final currentUser = FirebaseAuth.instance.currentUser;
       final signUpResult = await StepUpApiService.signUp(currentUser!.displayName!);
 
-      if (signUpResult == null || signUpResult.statusCode != 201) {
-        Fluttertoast.showToast(msg: "${signUpResult?.reasonPhrase}");
+      if (signUpResult != null && signUpResult.statusCode > 400) {
+        Fluttertoast.showToast(msg: "${signUpResult.reasonPhrase}");
         _firebaseAuth.signOut();
         await _googleSignIn.signOut();
         return;
