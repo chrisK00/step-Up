@@ -66,7 +66,7 @@ users.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavi
         return TypedResults.BadRequest(ex.Message);
     }
 
-    return Results.CreatedAtRoute($"/users/{requestWithUserId.UserId}");
+    return Results.Created($"/users/{requestWithUserId.UserId}", requestWithUserId.UserId);
 }).WithParameterValidation();
 
 users.MapGet(string.Empty, async ([FromQuery, Required] string username, IUserService userService, CancellationToken cancellation) =>
