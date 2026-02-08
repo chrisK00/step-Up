@@ -1,4 +1,5 @@
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.Mvc.ModelBinding;
 using stepUp.Api.Domains.Authentication;
 using stepUp.Api.Domains.FriendRequests;
 using stepUp.Api.Domains.Friendships;
@@ -51,7 +52,7 @@ app.MapGet("health", () => Results.Ok()).WithTags("Misc");
 var users = app.MapGroup("users")
     .WithTags("Users");
 
-users.MapPost(string.Empty, async (SignUpRequest request, HttpContext context, ILoginService loginService, CancellationToken cancellation) =>
+users.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] SignUpRequest request, HttpContext context, ILoginService loginService, CancellationToken cancellation) =>
 {
     var requestWithUserId = request with { UserId = context.GetUserId(), Email = context.GetEmail() };
 
@@ -78,7 +79,7 @@ users.MapGet(string.Empty, async ([FromQuery, Required] string username, IUserSe
 var steps = app.MapGroup("steps")
     .WithTags("Steps"); ;
 
-steps.MapPost(string.Empty, async (AddDailyStepsRequest request, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+steps.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] AddDailyStepsRequest request, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
     var requestWithUserId = request with { UserId = context.GetUserId() };
     await stepsService.AddDailyStepsAsync(requestWithUserId, cancellation);
@@ -102,7 +103,7 @@ steps.MapGet("friends", async (HttpContext context, IStepsService stepsService, 
 
 var friendRequests = app.MapGroup("friend-requests")
     .WithTags("Friend Requests");
-friendRequests.MapPost(string.Empty, async (SendFriendRequest request, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
+friendRequests.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] SendFriendRequest request, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
 {
     var requestWithUserId = request with { UserId = context.GetUserId() };
     var result = await friendRequestService.SendFriendRequestAsync(requestWithUserId, cancellation);
