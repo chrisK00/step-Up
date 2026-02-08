@@ -217,7 +217,14 @@ class SignInWidget extends StatelessWidget {
 
       // TODO add username select screen and handle username is taken / error messages
       final currentUser = FirebaseAuth.instance.currentUser;
-      await StepUpApiService.signUp(currentUser!.displayName!);
+      final signUpResult = await StepUpApiService.signUp(currentUser!.displayName!);
+
+      if (signUpResult?.statusCode != 201) {
+        Fluttertoast.showToast(msg: "${signUpResult?.reasonPhrase}");
+        _firebaseAuth.signOut();
+        await _googleSignIn.signOut();
+        return;
+      }
 
       final health = Health();
       await HealthHelper.authenticateHealth(health);
