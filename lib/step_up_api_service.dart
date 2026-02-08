@@ -26,7 +26,7 @@ enum FriendRequestType { incoming, outgoing }
 
 class StepUpApiService {
   // static const String _apiUrl = 'http://10.0.2.2:5208';
-  static const String _apiUrl = 'https://step-up.racknerd.chrispys.top';
+  static const String _apiUrl = 'https://stepup.racknerd.chrispys.top';
   static const String _usersEndpoint = '$_apiUrl/users';
   static const String _friendRequestsEndpoint = '$_apiUrl/friend-requests';
   static const String _friendshipsEndpoint = '$_apiUrl/friends';
