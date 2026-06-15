@@ -154,12 +154,12 @@ class StepUpApiService {
   }
 
   static Future deleteFriendship(String userId) async {
-    final url = Uri.parse("$_friendRequestsEndpoint/$userId");
+    final url = Uri.parse("$_friendshipsEndpoint/$userId");
     final headers = (await HeaderBuilder().auth()).build();
 
     try {
       final response = await http.delete(url, headers: headers);
-      Fluttertoast.showToast(msg: "removed");
+      Fluttertoast.showToast(msg: "removed: ${response.statusCode}");
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
