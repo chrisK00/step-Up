@@ -26,45 +26,53 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
     initFriends();
   }
 
+  Future<void> _reload() => Future.wait([
+        initFriendRequests(),
+        initSentFriendRequests(),
+        initFriends(),
+      ]);
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
-    return Padding(
-      padding: const EdgeInsetsGeometry.all(16),
-      child: Column(children: [
-        Row(
-          children: [
-            Expanded(child: TextField(controller: _usernameController)),
-            IconButton(onPressed: sendFriendRequest, icon: const Icon(FontAwesomeIcons.plus))
-          ],
-        ),
-        const SizedBox(height: 20),
-        ExpansionPanelList(
-          children: [
-            ExpansionPanel(
-              isExpanded: true,
-              headerBuilder: (context, isOpen) => ListTile(title: Text("Friend Requests (${friendRequests.length})")),
-              body: Column(
-                  // TODO in backend include fromUserName
-                  children: friendRequests.map((fr) => createFriendRequestTile(fr, theme)).toList()),
-            ),
-            ExpansionPanel(
-              isExpanded: true,
-              headerBuilder: (context, isOpen) => ListTile(title: Text("Friends (${friends.length})")),
-              body: Column(
-                children: friends.map((fr) => createFriendTile(fr, theme)).toList(),
+    return RefreshIndicator(
+      onRefresh: _reload,
+      child: SingleChildScrollView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.all(16),
+        child: Column(children: [
+          Row(
+            children: [
+              Expanded(child: TextField(controller: _usernameController)),
+              IconButton(onPressed: sendFriendRequest, icon: const Icon(FontAwesomeIcons.plus))
+            ],
+          ),
+          const SizedBox(height: 20),
+          ExpansionPanelList(
+            children: [
+              ExpansionPanel(
+                isExpanded: true,
+                headerBuilder: (context, isOpen) => ListTile(title: Text("Friend Requests (${friendRequests.length})")),
+                body: Column(children: friendRequests.map((fr) => createFriendRequestTile(fr, theme)).toList()),
               ),
-            ),
-            ExpansionPanel(
-              isExpanded: true, // TODO default false
-              headerBuilder: (context, isOpen) =>
-                  ListTile(title: Text("Sent Friend Requests (${sentFriendRequests.length})")),
-              body: Column(children: sentFriendRequests.map((fr) => createSentFriendRequestTile(fr, theme)).toList()),
-            ),
-          ],
-        )
-      ]),
+              ExpansionPanel(
+                isExpanded: true,
+                headerBuilder: (context, isOpen) => ListTile(title: Text("Friends (${friends.length})")),
+                body: Column(
+                  children: friends.map((fr) => createFriendTile(fr, theme)).toList(),
+                ),
+              ),
+              ExpansionPanel(
+                isExpanded: true,
+                headerBuilder: (context, isOpen) =>
+                    ListTile(title: Text("Sent Friend Requests (${sentFriendRequests.length})")),
+                body: Column(children: sentFriendRequests.map((fr) => createSentFriendRequestTile(fr, theme)).toList()),
+              ),
+            ],
+          )
+        ]),
+      ),
     );
   }
 
@@ -83,7 +91,7 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
     return ListTile(
         title: Text(fr.toUsername),
         trailing: IconButton(
-            onPressed: () => (),
+            onPressed: () async => await deleteFriendRequest(fr.toUserId),
             icon: const Icon(
               FontAwesomeIcons.remove,
               color: Colors.red,
@@ -114,6 +122,12 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
     setState(() => friends.remove(friendResponse));
   }
 
+  Future<void> deleteFriendRequest(String userId) async {
+    await StepUpApiService.deleteFriendship(userId);
+
+    setState(() => friends.removeWhere((fr) => fr.id == userId));
+  }
+
   Future<void> initSentFriendRequests() async {
     final sfr = await StepUpApiService.getFriendRequests(FriendRequestType.outgoing);
 
@@ -139,5 +153,6 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
 
   Future<void> acceptFriendRequest(String fromUserId) async {
     await StepUpApiService.acceptFriendRequest(fromUserId);
+    await _reload();
   }
 }

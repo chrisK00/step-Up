@@ -5,6 +5,7 @@ import 'package:fluttertoast/fluttertoast.dart';
 import 'package:http/http.dart' as http;
 import 'package:step_up/friends/models.dart';
 import 'package:step_up/header_builder.dart';
+import 'package:step_up/race/race_player.dart';
 import 'package:step_up/steps/daily_steps.dart';
 
 extension StringCasingExtension on String {
@@ -113,10 +114,15 @@ class StepUpApiService {
     }
   }
 
-  static Future deleteFriendRequest() async {
-    final url = Uri.parse(_friendRequestsEndpoint);
+  static Future deleteFriendRequest(String userId) async {
+    final url = Uri.parse("$_friendRequestsEndpoint/$userId");
     final headers = (await HeaderBuilder().auth()).build();
-    // delete
+    try {
+      await http.delete(url, headers: headers, body: null);
+    } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
+      debugPrint('HTTP Error: $e');
+    }
   }
 
   static Future<List<FriendRequestsResponse>?> getFriendRequests(FriendRequestType frType) async {
@@ -148,11 +154,12 @@ class StepUpApiService {
   }
 
   static Future deleteFriendship(String userId) async {
-    final url = Uri.parse("$_friendshipsEndpoint/$userId");
+    final url = Uri.parse("$_friendRequestsEndpoint/$userId");
     final headers = (await HeaderBuilder().auth()).build();
 
     try {
       final response = await http.delete(url, headers: headers);
+      Fluttertoast.showToast(msg: "removed");
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
@@ -169,6 +176,37 @@ class StepUpApiService {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       return null;
+    }
+  }
+
+  /// Fetches the user's own steps and all friends' steps, merges them,
+  /// and returns a ranked leaderboard sorted by steps descending.
+  static Future<List<RacePlayer>> getRaceLeaderboard() async {
+    try {
+      final headers = (await HeaderBuilder().auth()).build();
+
+      // Fetch own steps and friends' steps in parallel.
+      final results = await Future.wait([
+        http.get(Uri.parse(_stepsEndpoint), headers: headers),
+        http.get(Uri.parse("$_stepsEndpoint/friends"), headers: headers),
+      ]);
+
+      final List<dynamic> ownJson = jsonDecode(results[0].body);
+      final List<dynamic> friendsJson = jsonDecode(results[1].body);
+
+      // Each entry from /steps is a daily record; take today's (first) own entry.
+      final all = [
+        ...ownJson.take(1).map((e) => RacePlayer.fromJson(e)),
+        ...friendsJson.map((e) => RacePlayer.fromJson(e)),
+      ];
+
+      // Sort by steps descending (highest = rank 1).
+      all.sort((a, b) => b.steps.compareTo(a.steps));
+      return all;
+    } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
+      debugPrint('HTTP Error: $e');
+      return [];
     }
   }
 }
