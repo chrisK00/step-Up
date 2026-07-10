@@ -30,14 +30,26 @@ class HealthHelper {
 
   static Future<num> getStepsFromHealth(Health health) async {
     final now = DateTime.now();
-    List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
-        types: [HealthDataType.STEPS],
-        startTime: DateTime(now.year, now.month, now.day, 0, 0, 0),
-        endTime: DateTime.now());
+    final startOfDay = DateTime(now.year, now.month, now.day, 0, 0, 0);
 
-    var nonSystemHealthData = healthData.where((d) => d.sourceName != "android");
-    final totalSteps =
-        nonSystemHealthData.fold<num>(0, (sum, point) => sum + (point.value as NumericHealthValue).numericValue);
-    return totalSteps;
+    final totalSteps = await health.getTotalStepsInInterval(startOfDay, now, includeManualEntry: true);
+    if (totalSteps != null) {
+      return totalSteps;
+    }
+
+    List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
+      types: [HealthDataType.STEPS],
+      startTime: startOfDay,
+      endTime: now,
+    );
+
+    final nonSystemHealthData = healthData.where((d) => d.sourceName != "android");
+    return nonSystemHealthData.fold<num>(0, (sum, point) {
+      final value = point.value;
+      if (value is NumericHealthValue) {
+        return sum + value.numericValue;
+      }
+      return sum;
+    });
   }
 }
