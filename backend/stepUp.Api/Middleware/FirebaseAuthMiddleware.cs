@@ -5,8 +5,6 @@ namespace stepUp.Api.Middleware;
 
 public class FirebaseAuthMiddleware(RequestDelegate next)
 {
-    private readonly RequestDelegate _next = next;
-
     public async Task InvokeAsync(HttpContext context)
     {
         string? authHeader = context.Request.Headers.Authorization;
@@ -21,9 +19,17 @@ public class FirebaseAuthMiddleware(RequestDelegate next)
         try
         {
             var decodedToken = await FirebaseAuth.DefaultInstance.VerifyIdTokenAsync(authHeader);
+            if (!decodedToken.Claims.TryGetValue("email", out var emailClaimValue) || emailClaimValue is not string email)
+            {
+                context.Response.StatusCode = StatusCodes.Status401Unauthorized;
+                await context.Response.WriteAsync("Incomplete claims");
+                return;
+            }
+
             var claims = new List<Claim>
                 {
                    new(ClaimTypes.NameIdentifier, decodedToken.Uid),
+                   new(ClaimTypes.Email, email),
                 };
 
             context.User = new ClaimsPrincipal(new ClaimsIdentity(claims));
@@ -35,6 +41,6 @@ public class FirebaseAuthMiddleware(RequestDelegate next)
             return;
         }
 
-        await _next(context);
+        await next(context);
     }
 }

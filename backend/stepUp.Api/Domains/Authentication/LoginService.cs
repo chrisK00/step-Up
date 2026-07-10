@@ -1,17 +1,26 @@
 ﻿
+using Microsoft.EntityFrameworkCore;
+using stepUp.Api.Data;
+using stepUp.Api.Data.Entities;
+
 namespace stepUp.Api.Domains.Authentication;
 
-public class LoginService : ILoginService
+internal class LoginService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ILoginService
 {
-    public Task SignUpAsync(SignUpRequest request)
+    public async Task SignUpAsync(SignUpRequest request, CancellationToken cancellation)
     {
-        // TODO guard clauses
-        if (string.IsNullOrWhiteSpace(request.Email) || string.IsNullOrWhiteSpace(request.FirstName))
+        var userExists = await dbContext.Users.AnyAsync(u => u.UserId == request.UserId || u.Email == request.Email || u.FirstName == request.FirstName, cancellation);
+        if (userExists)
         {
-            // TODO exception
+            throw new UserExistsException();
         }
 
-        // TODO create new user: id, email, firstname
-        throw new NotImplementedException();
+        dbContext.Users.Add(new AppUser
+        {
+            Email = request.Email,
+            FirstName = request.FirstName,
+            UserId = request.UserId
+        });
+        await unitOfWork.SaveChangesAsync(cancellation);
     }
 }
