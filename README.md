@@ -23,6 +23,8 @@ flutter build apk --split-per-abi
 Changing app icon:
 dart run flutter_launcher_icons
 
+### Debugging prod
+Just run F5
 
 ## Backend
 - Adding migrations:

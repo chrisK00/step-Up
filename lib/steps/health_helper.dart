@@ -32,24 +32,44 @@ class HealthHelper {
     final now = DateTime.now();
     final startOfDay = DateTime(now.year, now.month, now.day, 0, 0, 0);
 
-    final totalSteps = await health.getTotalStepsInInterval(startOfDay, now, includeManualEntry: true);
-    if (totalSteps != null) {
-      return totalSteps;
-    }
-
     List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
       types: [HealthDataType.STEPS],
       startTime: startOfDay,
       endTime: now,
     );
 
-    final nonSystemHealthData = healthData.where((d) => d.sourceName != "android");
-    return nonSystemHealthData.fold<num>(0, (sum, point) {
+    // List<HealthDataPoint> uniqueData = health.removeDuplicates(healthData);
+
+    var totalSteps = healthData.fold<num>(0, (sum, point) {
       final value = point.value;
-      if (value is NumericHealthValue) {
+      if (point.sourceName.contains("com.google.android.apps.fitness") && value is NumericHealthValue) {
         return sum + value.numericValue;
       }
+
       return sum;
     });
+
+    return totalSteps;
   }
 }
+
+  //   final totalSteps = await health.getTotalStepsInInterval(startOfDay, now, includeManualEntry: true);
+  //   if (totalSteps != null) {
+  //     return totalSteps;
+  //   }
+
+  //   List<HealthDataPoint> healthData = await health.getHealthDataFromTypes(
+  //     types: [HealthDataType.STEPS],
+  //     startTime: startOfDay,
+  //     endTime: now,
+  //   );
+
+  //   final nonSystemHealthData = healthData.where((d) => d.sourceName != "android");
+  //   return nonSystemHealthData.fold<num>(0, (sum, point) {
+  //     final value = point.value;
+  //     if (value is NumericHealthValue) {
+  //       return sum + value.numericValue;
+  //     }
+  //     return sum;
+  //   });
+  // }
