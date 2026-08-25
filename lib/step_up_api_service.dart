@@ -78,6 +78,35 @@ class StepUpApiService {
     }
   }
 
+  static Future<List<RacePlayer>> getRaceLeaderboard({DateTime? date}) async {
+    try {
+      final headers = (await HeaderBuilder().auth()).build();
+      final dateQuery = date == null
+          ? ''
+          : '?date=${date.toIso8601String().substring(0, 10)}';
+
+      final results = await Future.wait([
+        http.get(Uri.parse('$_stepsEndpoint$dateQuery'), headers: headers),
+        http.get(Uri.parse('$_stepsEndpoint/friends$dateQuery'), headers: headers),
+      ]);
+
+      final List<dynamic> ownJson = jsonDecode(results[0].body);
+      final List<dynamic> friendsJson = jsonDecode(results[1].body);
+
+      final all = [
+        ...ownJson.map((e) => RacePlayer.fromJson(e)),
+        ...friendsJson.map((e) => RacePlayer.fromJson(e)),
+      ];
+
+      all.sort((a, b) => b.steps.compareTo(a.steps));
+      return all;
+    } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
+      debugPrint('HTTP Error: $e');
+      return [];
+    }
+  }
+
   static Future<List<UsersSearchResponse>?> searchUsers(String username) async {
     final url = "$_usersEndpoint?username=$username";
     try {
@@ -179,34 +208,4 @@ class StepUpApiService {
     }
   }
 
-  /// Fetches the user's own steps and all friends' steps, merges them,
-  /// and returns a ranked leaderboard sorted by steps descending.
-  static Future<List<RacePlayer>> getRaceLeaderboard() async {
-    try {
-      final headers = (await HeaderBuilder().auth()).build();
-
-      // Fetch own steps and friends' steps in parallel.
-      final results = await Future.wait([
-        http.get(Uri.parse(_stepsEndpoint), headers: headers),
-        http.get(Uri.parse("$_stepsEndpoint/friends"), headers: headers),
-      ]);
-
-      final List<dynamic> ownJson = jsonDecode(results[0].body);
-      final List<dynamic> friendsJson = jsonDecode(results[1].body);
-
-      // Each entry from /steps is a daily record; take today's (first) own entry.
-      final all = [
-        ...ownJson.take(1).map((e) => RacePlayer.fromJson(e)),
-        ...friendsJson.map((e) => RacePlayer.fromJson(e)),
-      ];
-
-      // Sort by steps descending (highest = rank 1).
-      all.sort((a, b) => b.steps.compareTo(a.steps));
-      return all;
-    } catch (e) {
-      Fluttertoast.showToast(msg: "ERROR: $e");
-      debugPrint('HTTP Error: $e');
-      return [];
-    }
-  }
 }

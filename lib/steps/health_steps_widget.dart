@@ -18,6 +18,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   String _status = 'Loading...';
   bool _isDisposed = false;
   final Health _health = Health();
+  DateTime _selectedDate = DateTime.now();
 
   @override
   void initState() {
@@ -26,32 +27,113 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   }
 
   Future<void> _initSteps() async {
-    final healthSteps = await HealthHelper.getStepsFromHealth(_health);
-    final updateStepsResponse = await StepUpApiService.postSteps(healthSteps);
+    final now = DateTime.now();
+    final isToday = _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
 
-    if (updateStepsResponse == null || updateStepsResponse.statusCode != 201) {
-      safeSetState(() => _status = 'Error sending steps: ${updateStepsResponse?.statusCode}');
+    if (isToday) {
+      final healthSteps = await HealthHelper.getStepsFromHealth(_health);
+      final updateStepsResponse = await StepUpApiService.postSteps(healthSteps);
+
+      if (updateStepsResponse == null || updateStepsResponse.statusCode != 201) {
+        safeSetState(() => _status = 'Error sending steps: ${updateStepsResponse?.statusCode}');
+      } else {
+        safeSetState(() => _status = '');
+      }
     } else {
       safeSetState(() => _status = '');
     }
 
-    final players = await StepUpApiService.getRaceLeaderboard();
+    final players = await StepUpApiService.getRaceLeaderboard(date: _selectedDate);
     safeSetState(() => _players = players);
+  }
+
+  String get _dayLabel {
+    final now = DateTime.now();
+    final selected = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day);
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+
+    if (selected == today) return 'Today';
+    if (selected == yesterday) return 'Yesterday';
+    return '${_selectedDate.month}/${_selectedDate.day}/${_selectedDate.year}';
+  }
+
+  void _showPreviousDay() {
+    safeSetState(() {
+      _selectedDate =
+          DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day).subtract(const Duration(days: 1));
+      _status = 'Loading...';
+    });
+    _initSteps();
+  }
+
+  void _showToday() {
+    safeSetState(() {
+      _selectedDate = DateTime.now();
+      _status = 'Loading...';
+    });
+    _initSteps();
+  }
+
+  bool get _isToday {
+    final now = DateTime.now();
+    return _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
   }
 
   @override
   Widget build(BuildContext context) {
     return Column(
       children: [
-        if (_status.isNotEmpty) Text(_status),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(16, 8, 16, 4),
+          child: Row(
+            children: [
+              Expanded(
+                child: Text(
+                  _dayLabel,
+                  style: Theme.of(context).textTheme.titleMedium,
+                ),
+              ),
+              if (_status.isNotEmpty) Text(_status),
+            ],
+          ),
+        ),
         Expanded(
           child: RefreshIndicator(
             onRefresh: _initSteps,
             child: ListView.builder(
+              padding: const EdgeInsets.only(bottom: 12),
               itemCount: _players.length,
               itemBuilder: (context, index) => _RaceLane(
                 rank: index + 1,
                 player: _players[index],
+              ),
+            ),
+          ),
+        ),
+        Padding(
+          padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
+          child: Align(
+            alignment: Alignment.centerRight,
+            child: TextButton.icon(
+              onPressed: _selectedDate.day == DateTime.now().day &&
+                      _selectedDate.month == DateTime.now().month &&
+                      _selectedDate.year == DateTime.now().year
+                  ? _showPreviousDay
+                  : _showToday,
+              icon: Icon(
+                _isToday ? Icons.chevron_left : Icons.today,
+                size: 18,
+              ),
+              label: Text(
+                _isToday ? 'Previous Day' : 'Back to Today',
+              ),
+              style: TextButton.styleFrom(
+                visualDensity: VisualDensity.compact,
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                minimumSize: const Size(0, 36),
+                iconColor: const Color.fromARGB(255, 0, 0, 0),
+                foregroundColor: const Color.fromARGB(255, 0, 0, 0),
               ),
             ),
           ),

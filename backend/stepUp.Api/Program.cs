@@ -87,16 +87,16 @@ steps.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavi
     return Results.Created();
 }).WithParameterValidation();
 
-steps.MapGet(string.Empty, async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+steps.MapGet(string.Empty, async ([FromQuery] DateOnly? date, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
-    var dailySteps = await stepsService.GetDailyStepsAsync(context.GetUserId(), cancellation);
+    var dailySteps = await stepsService.GetDailyStepsAsync(context.GetUserId(), date, cancellation);
 
     return TypedResults.Ok(dailySteps);
 });
 
-steps.MapGet("friends", async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+steps.MapGet("friends", async ([FromQuery] DateOnly? date, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
-    var dailySteps = await stepsService.GetFriendsDailyStepsAsync(context.GetUserId(), cancellation);
+    var dailySteps = await stepsService.GetFriendsDailyStepsAsync(context.GetUserId(), date, cancellation);
 
     return TypedResults.Ok(dailySteps);
 });
