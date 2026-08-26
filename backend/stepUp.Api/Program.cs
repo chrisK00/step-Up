@@ -87,16 +87,23 @@ steps.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavi
     return Results.Created();
 }).WithParameterValidation();
 
-steps.MapGet(string.Empty, async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+steps.MapGet(string.Empty, async ([FromQuery] DateOnly? date, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
-    var dailySteps = await stepsService.GetDailyStepsAsync(context.GetUserId(), cancellation);
+    var dailySteps = await stepsService.GetDailyStepsAsync(context.GetUserId(), date, cancellation);
 
     return TypedResults.Ok(dailySteps);
 });
 
-steps.MapGet("friends", async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+steps.MapGet("friends", async ([FromQuery] DateOnly? date, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
-    var dailySteps = await stepsService.GetFriendsDailyStepsAsync(context.GetUserId(), cancellation);
+    var dailySteps = await stepsService.GetFriendsDailyStepsAsync(context.GetUserId(), date, cancellation);
+
+    return TypedResults.Ok(dailySteps);
+});
+
+steps.MapGet("history", async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+{
+    var dailySteps = await stepsService.GetCurrentMonthStepHistoryAsync(context.GetUserId(), cancellation);
 
     return TypedResults.Ok(dailySteps);
 });
@@ -152,6 +159,14 @@ friends.MapDelete("{friendId}", async (string friendId, HttpContext context, IFr
     var result = await friendshipService.DeleteFriendshipAsync(requestWithUserId, cancellation);
 
     return result.Success ? Results.NoContent() : TypedResults.BadRequest(result.Error);
+}).WithParameterValidation();
+
+friends.MapPost("reactions/thumbs-up", async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] SendFriendReactionRequest request, HttpContext context, IFriendshipService friendshipService, CancellationToken cancellation) =>
+{
+    var requestWithUserId = request with { UserId = context.GetUserId() };
+    var result = await friendshipService.SendThumbsUpAsync(requestWithUserId, cancellation);
+
+    return result.Success ? Results.Created() : TypedResults.BadRequest(result.Error);
 }).WithParameterValidation();
 
 app.Run();

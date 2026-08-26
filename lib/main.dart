@@ -5,6 +5,8 @@ import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
+import 'package:step_up/app_logger.dart';
+import 'package:step_up/achievements/achievements_page.dart';
 import 'package:step_up/firebase_options.dart';
 import 'package:step_up/friends/friends_widget.dart';
 import 'package:step_up/settings/settings_widget.dart';
@@ -13,6 +15,7 @@ import 'package:step_up/step_up_api_service.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:step_up/steps/health_steps_widget.dart';
 import 'package:workmanager/workmanager.dart';
+import 'dart:ui';
 
 const jobName = "sendDailyStepsJob";
 
@@ -66,6 +69,7 @@ void callbackDispatcher() {
       await storage.write(key: 'key', value: text);
       await storage.write(key: "error", value: '$start: $e');
       debugPrint("Error during $jobName, $e");
+      await AppLogger.logError(e);
     }
     return true;
   });
@@ -86,12 +90,21 @@ Future<void> registerPeriodicTasks() async {
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
+  await AppLogger.init();
+  FlutterError.onError = (details) {
+    FlutterError.presentError(details);
+    AppLogger.logError(details.exception, details.stack);
+  };
+  PlatformDispatcher.instance.onError = (error, stack) {
+    AppLogger.logError(error, stack);
+    return true;
+  };
   await Workmanager().initialize(callbackDispatcher);
 
   final currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser != null) {
     final health = Health();
-    HealthHelper.authenticateHealth(health);
+    await HealthHelper.authenticateHealth(health);
 
 // For testing
     // await Workmanager().registerOneOffTask("unique", jobName, initialDelay: Duration.zero);
@@ -117,6 +130,7 @@ class _MainAppState extends State<MainAppState> {
   final List<Widget> pages = [
     const HealthStepsWidget(),
     const FriendsWidgetState(),
+    const AchievementsPage(),
     SettingsWidget(),
   ];
 
@@ -127,6 +141,7 @@ class _MainAppState extends State<MainAppState> {
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
+      await AppLogger.logError(e);
     }
   }
 
@@ -192,6 +207,10 @@ class _MainAppState extends State<MainAppState> {
           label: 'Friends',
         ),
         NavigationDestination(
+          icon: Icon(FontAwesomeIcons.medal),
+          label: 'Achievements',
+        ),
+        NavigationDestination(
           icon: Icon(FontAwesomeIcons.gear),
           label: 'Settings',
         ),
@@ -231,6 +250,7 @@ class SignInWidget extends StatelessWidget {
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
+      await AppLogger.logError(e);
       _firebaseAuth.signOut();
       await _googleSignIn.signOut();
     }
