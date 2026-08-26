@@ -8,6 +8,7 @@ class RacePlayer {
   final Color color;
   final bool isCurrent;
   final int thumbsUpCount;
+  final bool hasSentThumbsUp;
 
   const RacePlayer({
     required this.userId,
@@ -16,6 +17,7 @@ class RacePlayer {
     required this.color,
     this.isCurrent = false,
     this.thumbsUpCount = 0,
+    this.hasSentThumbsUp = false,
   });
 
   static Color getTierColor(int steps) {
@@ -37,6 +39,7 @@ class RacePlayer {
   factory RacePlayer.fromJson(Map<String, dynamic> json, {bool isCurrent = false}) {
     final steps = json['steps'] as int? ?? 0;
     final thumbsUpCount = (json['thumbsUpCount'] ?? json['ThumbsUpCount'] ?? 0) as int;
+    final hasSentThumbsUp = (json['hasSentThumbsUp'] ?? json['HasSentThumbsUp'] ?? false) as bool;
 
     return RacePlayer(
       userId: json['userId'] as String,
@@ -45,6 +48,7 @@ class RacePlayer {
       color: getTierColor(steps),
       isCurrent: isCurrent,
       thumbsUpCount: thumbsUpCount,
+      hasSentThumbsUp: hasSentThumbsUp,
     );
   }
 }

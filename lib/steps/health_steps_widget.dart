@@ -17,7 +17,6 @@ class HealthStepsWidget extends StatefulWidget {
 
 class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   List<RacePlayer> _players = [];
-  List<FriendsResponse> _friends = [];
   List<ReceivedReactionResponse> _receivedReactions = [];
   String _status = 'Loading...';
   bool _isDisposed = false;
@@ -49,14 +48,12 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 
     final results = await Future.wait([
       StepUpApiService.getRaceLeaderboard(date: _selectedDate),
-      StepUpApiService.getFriends(),
       StepUpApiService.getReceivedReactions(),
     ]);
 
     safeSetState(() {
       _players = results[0] as List<RacePlayer>;
-      _friends = (results[1] as List<FriendsResponse>?) ?? [];
-      _receivedReactions = results[2] as List<ReceivedReactionResponse>;
+      _receivedReactions = results[1] as List<ReceivedReactionResponse>;
     });
   }
 
@@ -66,20 +63,15 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
         (currentUserId != null && player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
     if (isCurrent || !_isToday) return;
 
-    final friend = _friends.cast<FriendsResponse?>().firstWhere(
-          (f) => f?.id == player.userId,
-          orElse: () => null,
-        );
-    if (friend == null) return;
-
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
       builder: (ctx) => _ThumbsUpSheet(
-        friend: friend,
+        username: player.username,
+        hasSent: player.hasSentThumbsUp,
         onThumbsUp: () async {
-          await StepUpApiService.sendThumbsUpToFriend(friend.id);
+          await StepUpApiService.sendThumbsUpToFriend(player.userId);
           await _initSteps();
         },
       ),
@@ -388,10 +380,15 @@ class _RaceLane extends StatelessWidget {
 }
 
 class _ThumbsUpSheet extends StatefulWidget {
-  final FriendsResponse friend;
+  final String username;
+  final bool hasSent;
   final Future<void> Function() onThumbsUp;
 
-  const _ThumbsUpSheet({required this.friend, required this.onThumbsUp});
+  const _ThumbsUpSheet({
+    required this.username,
+    required this.hasSent,
+    required this.onThumbsUp,
+  });
 
   @override
   State<_ThumbsUpSheet> createState() => _ThumbsUpSheetState();
@@ -399,7 +396,13 @@ class _ThumbsUpSheet extends StatefulWidget {
 
 class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
   bool _loading = false;
-  bool _alreadySent = false;
+  late bool _alreadySent;
+
+  @override
+  void initState() {
+    super.initState();
+    _alreadySent = widget.hasSent;
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -420,7 +423,7 @@ class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
             ),
           ),
           Text(
-            widget.friend.username,
+            widget.username,
             style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 28),

@@ -221,11 +221,16 @@ class StepUpApiService {
 
   static Future<http.Response?> sendThumbsUpToFriend(String friendId) async {
     try {
-      return await http.post(
+      final response = await http.post(
         await _uri('/friends/reactions/thumbs-up'),
         headers: (await HeaderBuilder().jsonContent().auth()).build(),
         body: jsonEncode(<String, String>{'friendId': friendId}),
       );
+      debugPrint('sendThumbsUpToFriend: status=${response.statusCode} body=${response.body}');
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        Fluttertoast.showToast(msg: "Failed: ${response.statusCode} ${response.body}");
+      }
+      return response;
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
