@@ -73,6 +73,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       builder: (ctx) => _ThumbsUpSheet(
         friend: friend,
         onThumbsUp: () async {
@@ -366,14 +367,14 @@ class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 36 + MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
@@ -383,8 +384,11 @@ class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
             widget.friend.username,
             style: theme.textTheme.titleLarge,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 28),
           FilledButton.icon(
+            style: FilledButton.styleFrom(
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 14),
+            ),
             onPressed: _alreadySent || _loading
                 ? null
                 : () async {
@@ -403,6 +407,7 @@ class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
                 : Icon(_alreadySent ? Icons.thumb_up : Icons.thumb_up_alt_outlined),
             label: Text(_alreadySent ? 'Already sent today' : 'Send thumbs up'),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );

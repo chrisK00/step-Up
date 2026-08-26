@@ -52,7 +52,7 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
       onRefresh: _reload,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 16),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 48),
         child: Column(children: [
           if (currentUsername.isNotEmpty) ...[
             Card(
