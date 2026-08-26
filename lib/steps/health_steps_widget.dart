@@ -82,6 +82,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
+      isScrollControlled: true,
       builder: (ctx) => _ReceivedReactionsSheet(reactions: _receivedReactions),
     );
   }
@@ -133,7 +134,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              if (_receivedReactions.isNotEmpty)
+              if (_isToday && _receivedReactions.isNotEmpty)
                 GestureDetector(
                   onTap: _showReceivedReactionsSheet,
                   child: Container(
@@ -179,9 +180,11 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
                     (currentUserId != null &&
                         player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
 
-                final int likesCount = isCurrent
-                    ? (_receivedReactions.isNotEmpty ? _receivedReactions.length : player.thumbsUpCount)
-                    : player.thumbsUpCount;
+                final int likesCount = _isToday
+                    ? (isCurrent
+                        ? (_receivedReactions.isNotEmpty ? _receivedReactions.length : player.thumbsUpCount)
+                        : player.thumbsUpCount)
+                    : 0;
 
                 return _RaceLane(
                   rank: index + 1,
@@ -466,14 +469,14 @@ class _ReceivedReactionsSheet extends StatelessWidget {
     final theme = Theme.of(context);
 
     return Padding(
-      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      padding: EdgeInsets.fromLTRB(24, 20, 24, 36 + MediaQuery.of(context).viewInsets.bottom + MediaQuery.of(context).padding.bottom),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Container(
             width: 40,
             height: 4,
-            margin: const EdgeInsets.only(bottom: 16),
+            margin: const EdgeInsets.only(bottom: 20),
             decoration: BoxDecoration(
               color: Colors.grey.shade300,
               borderRadius: BorderRadius.circular(2),
@@ -487,14 +490,35 @@ class _ReceivedReactionsSheet extends StatelessWidget {
               Text('Liked today', style: theme.textTheme.titleLarge),
             ],
           ),
-          const SizedBox(height: 16),
-          ...reactions.map(
-            (r) => ListTile(
-              leading: const Icon(Icons.person),
-              title: Text(r.fromUsername),
-              dense: true,
+          const SizedBox(height: 20),
+          Flexible(
+            child: SingleChildScrollView(
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: reactions
+                    .map(
+                      (r) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 6),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            const Icon(Icons.person, size: 20, color: Colors.grey),
+                            const SizedBox(width: 8),
+                            Text(
+                              r.fromUsername,
+                              style: theme.textTheme.bodyLarge?.copyWith(
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    )
+                    .toList(),
+              ),
             ),
           ),
+          const SizedBox(height: 16),
         ],
       ),
     );
