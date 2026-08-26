@@ -208,7 +208,7 @@ class _MainAppState extends State<MainAppState> {
         ),
         NavigationDestination(
           icon: Icon(FontAwesomeIcons.medal),
-          label: 'Achievements',
+          label: 'Medals',
         ),
         NavigationDestination(
           icon: Icon(FontAwesomeIcons.gear),

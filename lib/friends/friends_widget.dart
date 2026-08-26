@@ -151,7 +151,27 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
               ),
             ),
             IconButton(
-                onPressed: () async => await deleteFriendship(fr),
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (ctx) => AlertDialog(
+                      title: const Text('Remove friend'),
+                      content: Text('Remove ${fr.username} from your friends?'),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(false),
+                          child: const Text('Cancel'),
+                        ),
+                        TextButton(
+                          onPressed: () => Navigator.of(ctx).pop(true),
+                          style: TextButton.styleFrom(foregroundColor: Colors.red),
+                          child: const Text('Remove'),
+                        ),
+                      ],
+                    ),
+                  );
+                  if (confirmed == true) await deleteFriendship(fr);
+                },
                 icon: const Icon(
                   FontAwesomeIcons.xmark,
                   color: Colors.red,

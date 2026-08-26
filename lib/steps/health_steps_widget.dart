@@ -1,5 +1,7 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
+import 'package:step_up/friends/models.dart';
 import 'package:step_up/race/race_player.dart';
 import 'package:step_up/step_up_api_service.dart';
 import 'package:step_up/steps/health_helper.dart';
@@ -15,6 +17,7 @@ class HealthStepsWidget extends StatefulWidget {
 
 class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   List<RacePlayer> _players = [];
+  List<FriendsResponse> _friends = [];
   String _status = 'Loading...';
   bool _isDisposed = false;
   final Health _health = Health();
@@ -43,8 +46,37 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
       safeSetState(() => _status = '');
     }
 
-    final players = await StepUpApiService.getRaceLeaderboard(date: _selectedDate);
-    safeSetState(() => _players = players);
+    final results = await Future.wait([
+      StepUpApiService.getRaceLeaderboard(date: _selectedDate),
+      StepUpApiService.getFriends(),
+    ]);
+
+    safeSetState(() {
+      _players = results[0] as List<RacePlayer>;
+      _friends = (results[1] as List<FriendsResponse>?) ?? [];
+    });
+  }
+
+  void _onPlayerTap(RacePlayer player) {
+    final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+    if (player.userId == currentUserId || !_isToday) return;
+
+    final friend = _friends.cast<FriendsResponse?>().firstWhere(
+          (f) => f?.id == player.userId,
+          orElse: () => null,
+        );
+    if (friend == null) return;
+
+    showModalBottomSheet(
+      context: context,
+      builder: (ctx) => _ThumbsUpSheet(
+        friend: friend,
+        onThumbsUp: () async {
+          await StepUpApiService.sendThumbsUpToFriend(friend.id);
+          await _initSteps();
+        },
+      ),
+    );
   }
 
   String get _dayLabel {
@@ -107,6 +139,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
               itemBuilder: (context, index) => _RaceLane(
                 rank: index + 1,
                 player: _players[index],
+                onTap: () => _onPlayerTap(_players[index]),
               ),
             ),
           ),
@@ -160,13 +193,14 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 class _RaceLane extends StatelessWidget {
   final int rank;
   final RacePlayer player;
+  final VoidCallback onTap;
 
   static const double _laneHeight = 90.0;
   static const double _iconSize = 36.0;
   static const double _trackLineHeight = 1.5;
   static const double _lineBottomOffset = 2.0;
 
-  const _RaceLane({required this.rank, required this.player});
+  const _RaceLane({required this.rank, required this.player, required this.onTap});
 
   /// Returns a medal icon for top 3, null otherwise.
   Widget? _medal() {
@@ -183,14 +217,16 @@ class _RaceLane extends StatelessWidget {
     final double progress = (player.steps / dailyStepGoal).clamp(0.0, 1.0);
     final medal = _medal();
 
-    return Container(
-      height: _laneHeight,
-      decoration: BoxDecoration(
-        border: Border(
-          bottom: BorderSide(color: Colors.grey.shade300, width: 0.5),
+    return InkWell(
+      onTap: onTap,
+      child: Container(
+        height: _laneHeight,
+        decoration: BoxDecoration(
+          border: Border(
+            bottom: BorderSide(color: Colors.grey.shade300, width: 0.5),
+          ),
         ),
-      ),
-      child: LayoutBuilder(
+        child: LayoutBuilder(
         builder: (context, constraints) {
           final double leftPosition = progress * (constraints.maxWidth - _iconSize);
           const double lineTop = _laneHeight - _lineBottomOffset - _trackLineHeight;
@@ -258,6 +294,75 @@ class _RaceLane extends StatelessWidget {
             ],
           );
         },
+      ),
+      ),
+    );
+  }
+}
+
+class _ThumbsUpSheet extends StatefulWidget {
+  final FriendsResponse friend;
+  final Future<void> Function() onThumbsUp;
+
+  const _ThumbsUpSheet({required this.friend, required this.onThumbsUp});
+
+  @override
+  State<_ThumbsUpSheet> createState() => _ThumbsUpSheetState();
+}
+
+class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
+  bool _loading = false;
+  late bool _alreadySent;
+
+  @override
+  void initState() {
+    super.initState();
+    _alreadySent = widget.friend.hasThumbsUpToday;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Text(
+            widget.friend.username,
+            style: theme.textTheme.titleLarge,
+          ),
+          const SizedBox(height: 20),
+          FilledButton.icon(
+            onPressed: _alreadySent || _loading
+                ? null
+                : () async {
+                    setState(() => _loading = true);
+                    final navigator = Navigator.of(context);
+                    await widget.onThumbsUp();
+                    if (!mounted) return;
+                    setState(() {
+                      _loading = false;
+                      _alreadySent = true;
+                    });
+                    navigator.pop();
+                  },
+            icon: _loading
+                ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                : Icon(_alreadySent ? Icons.thumb_up : Icons.thumb_up_alt_outlined),
+            label: Text(_alreadySent ? 'Already sent today' : 'Send thumbs up'),
+          ),
+        ],
       ),
     );
   }
