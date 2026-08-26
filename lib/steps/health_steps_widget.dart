@@ -178,11 +178,29 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
             child: ListView.builder(
               padding: const EdgeInsets.only(bottom: 12),
               itemCount: _players.length,
-              itemBuilder: (context, index) => _RaceLane(
-                rank: index + 1,
-                player: _players[index],
-                onTap: () => _onPlayerTap(_players[index]),
-              ),
+              itemBuilder: (context, index) {
+                final player = _players[index];
+                final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+                final isCurrent = player.userId == currentUserId;
+
+                int likesCount = 0;
+                if (isCurrent) {
+                  likesCount = _receivedReactions.length;
+                } else {
+                  final friend = _friends.cast<FriendsResponse?>().firstWhere(
+                        (f) => f?.id == player.userId,
+                        orElse: () => null,
+                      );
+                  likesCount = (friend?.hasThumbsUpToday ?? false) ? 1 : 0;
+                }
+
+                return _RaceLane(
+                  rank: index + 1,
+                  player: player,
+                  likesCount: likesCount,
+                  onTap: () => _onPlayerTap(player),
+                );
+              },
             ),
           ),
         ),
@@ -235,6 +253,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 class _RaceLane extends StatelessWidget {
   final int rank;
   final RacePlayer player;
+  final int likesCount;
   final VoidCallback onTap;
 
   static const double _laneHeight = 90.0;
@@ -242,7 +261,12 @@ class _RaceLane extends StatelessWidget {
   static const double _trackLineHeight = 1.5;
   static const double _lineBottomOffset = 2.0;
 
-  const _RaceLane({required this.rank, required this.player, required this.onTap});
+  const _RaceLane({
+    required this.rank,
+    required this.player,
+    required this.likesCount,
+    required this.onTap,
+  });
 
   /// Returns a medal icon for top 3, null otherwise.
   Widget? _medal() {
@@ -276,7 +300,7 @@ class _RaceLane extends StatelessWidget {
 
           return Stack(
             children: [
-              // ── Label: [medal?] username    steps ───────────────────
+              // ── Label: [medal?] username    steps [👍 (x)?] ───────────────────
               Positioned(
                 top: 10,
                 left: 12,
@@ -309,6 +333,30 @@ class _RaceLane extends StatelessWidget {
                         ),
                       ),
                     ),
+                    if (likesCount > 0) ...[
+                      const SizedBox(width: 6),
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.thumb_up,
+                            size: 24,
+                            color: Color.fromARGB(255, 75, 88, 75),
+                          ),
+                          if (likesCount > 1) ...[
+                            const SizedBox(width: 3),
+                            Text(
+                              '($likesCount)',
+                              style: const TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color.fromARGB(255, 75, 88, 75),
+                              ),
+                            ),
+                          ],
+                        ],
+                      ),
+                    ],
                   ],
                 ),
               ),
