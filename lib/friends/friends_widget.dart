@@ -1,4 +1,6 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:fluttertoast/fluttertoast.dart';
 import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:step_up/friends/models.dart';
@@ -11,7 +13,6 @@ class FriendsWidgetState extends StatefulWidget {
   State<FriendsWidgetState> createState() => _FriendsWidgetState();
 }
 
-// TODO en knapp med copy your username to clipboard
 class _FriendsWidgetState extends State<FriendsWidgetState> {
   final _usernameController = TextEditingController();
   List<FriendRequestsResponse> friendRequests = [];
@@ -32,19 +33,51 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
         initFriends(),
       ]);
 
+  void _copyUsernameToClipboard() {
+    final username = FirebaseAuth.instance.currentUser?.displayName ?? '';
+    if (username.isEmpty) {
+      Fluttertoast.showToast(msg: 'No username found to copy');
+      return;
+    }
+    Clipboard.setData(ClipboardData(text: username));
+    Fluttertoast.showToast(msg: 'Username copied to clipboard!');
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final currentUsername = FirebaseAuth.instance.currentUser?.displayName ?? '';
 
     return RefreshIndicator(
       onRefresh: _reload,
       child: SingleChildScrollView(
         physics: const AlwaysScrollableScrollPhysics(),
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.only(left: 16, right: 16, top: 0, bottom: 16),
         child: Column(children: [
+          if (currentUsername.isNotEmpty) ...[
+            Card(
+              child: ListTile(
+                leading: const Icon(FontAwesomeIcons.user),
+                title: Text(currentUsername),
+                trailing: IconButton(
+                  icon: const Icon(FontAwesomeIcons.copy),
+                  tooltip: 'Copy username',
+                  onPressed: _copyUsernameToClipboard,
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
+          ],
           Row(
             children: [
-              Expanded(child: TextField(controller: _usernameController)),
+              Expanded(
+                child: TextField(
+                  controller: _usernameController,
+                  decoration: const InputDecoration(
+                    hintText: 'Search username to add...',
+                  ),
+                ),
+              ),
               IconButton(onPressed: sendFriendRequest, icon: const Icon(FontAwesomeIcons.plus))
             ],
           ),
@@ -93,21 +126,38 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
         trailing: IconButton(
             onPressed: () async => await deleteFriendRequest(fr.toUserId),
             icon: const Icon(
-              FontAwesomeIcons.remove,
+              FontAwesomeIcons.xmark,
               color: Colors.red,
             )));
   }
 
-// TODO borde använda template för alal är typ samma förutom icon mm
+// TODO borde använda template för alla är typ samma förutom icon mm
   ListTile createFriendTile(FriendsResponse fr, ThemeData theme) {
     return ListTile(
         title: Text(fr.username),
-        trailing: IconButton(
-            onPressed: () async => await deleteFriendship(fr),
-            icon: const Icon(
-              FontAwesomeIcons.remove,
-              color: Colors.red,
-            )));
+        trailing: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            IconButton(
+              onPressed: fr.hasThumbsUpToday
+                  ? null
+                  : () async {
+                      await StepUpApiService.sendThumbsUpToFriend(fr.id);
+                      await _reload();
+                    },
+              icon: Icon(
+                fr.hasThumbsUpToday ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
+                color: fr.hasThumbsUpToday ? theme.colorScheme.primary : Colors.black,
+              ),
+            ),
+            IconButton(
+                onPressed: () async => await deleteFriendship(fr),
+                icon: const Icon(
+                  FontAwesomeIcons.xmark,
+                  color: Colors.red,
+                )),
+          ],
+        ));
   }
 
   Future<void> initFriendRequests() async {
@@ -149,6 +199,7 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
 
     await StepUpApiService.sendFriendRequest(foundUsers.first.id);
     _usernameController.text = "";
+    await _reload();
   }
 
   Future<void> acceptFriendRequest(String fromUserId) async {

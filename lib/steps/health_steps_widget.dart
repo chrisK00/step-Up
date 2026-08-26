@@ -113,29 +113,32 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
         ),
         Padding(
           padding: const EdgeInsets.fromLTRB(12, 0, 12, 12),
-          child: Align(
-            alignment: Alignment.centerRight,
-            child: TextButton.icon(
-              onPressed: _selectedDate.day == DateTime.now().day &&
-                      _selectedDate.month == DateTime.now().month &&
-                      _selectedDate.year == DateTime.now().year
-                  ? _showPreviousDay
-                  : _showToday,
-              icon: Icon(
-                _isToday ? Icons.chevron_left : Icons.today,
-                size: 18,
+          child: Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              const SizedBox.shrink(),
+              TextButton.icon(
+                onPressed: _selectedDate.day == DateTime.now().day &&
+                        _selectedDate.month == DateTime.now().month &&
+                        _selectedDate.year == DateTime.now().year
+                    ? _showPreviousDay
+                    : _showToday,
+                icon: Icon(
+                  _isToday ? Icons.chevron_left : Icons.today,
+                  size: 18,
+                ),
+                label: Text(
+                  _isToday ? 'Previous Day' : 'Back to Today',
+                ),
+                style: TextButton.styleFrom(
+                  visualDensity: VisualDensity.compact,
+                  padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                  minimumSize: const Size(0, 36),
+                  iconColor: const Color.fromARGB(255, 0, 0, 0),
+                  foregroundColor: const Color.fromARGB(255, 0, 0, 0),
+                ),
               ),
-              label: Text(
-                _isToday ? 'Previous Day' : 'Back to Today',
-              ),
-              style: TextButton.styleFrom(
-                visualDensity: VisualDensity.compact,
-                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                minimumSize: const Size(0, 36),
-                iconColor: const Color.fromARGB(255, 0, 0, 0),
-                foregroundColor: const Color.fromARGB(255, 0, 0, 0),
-              ),
-            ),
+            ],
           ),
         ),
       ],

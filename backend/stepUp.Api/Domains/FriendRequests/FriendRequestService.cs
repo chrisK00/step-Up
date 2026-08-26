@@ -26,9 +26,10 @@ internal class FriendRequestService(AppDbContext dbContext, IUnitOfWork unitOfWo
 
     public async Task<CommandResult> DeleteFriendRequestAsync(DeleteFriendRequest request, CancellationToken cancellation)
     {
-        var existingFriendRequest = await dbContext.FriendRequests.SingleOrDefaultAsync(fr => (fr.FromUserId == request.UserId && fr.ToUserId == fr.ToUserId)
-                                                                                            || (fr.ToUserId == request.UserId && fr.FromUserId == request.OtherUserId),
-                                                                                             cancellation);
+        var existingFriendRequest = await dbContext.FriendRequests.SingleOrDefaultAsync(fr =>
+                (fr.FromUserId == request.UserId && fr.ToUserId == request.OtherUserId)
+                || (fr.ToUserId == request.UserId && fr.FromUserId == request.OtherUserId),
+             cancellation);
         if (existingFriendRequest == null)
         {
             return CommandResult.Fail("Friend request does not exist");
@@ -71,9 +72,10 @@ internal class FriendRequestService(AppDbContext dbContext, IUnitOfWork unitOfWo
             return CommandResult.Fail("Cannot befriend yourself");
         }
 
-        var existingFriendRequest = await dbContext.FriendRequests.SingleOrDefaultAsync(fr => (fr.FromUserId == request.UserId && fr.ToUserId == fr.ToUserId)
-                                                                                            || (fr.ToUserId == request.UserId && fr.FromUserId == request.ToUserId),
-                                                                                             cancellation);
+        var existingFriendRequest = await dbContext.FriendRequests.SingleOrDefaultAsync(fr =>
+                (fr.FromUserId == request.UserId && fr.ToUserId == request.ToUserId)
+                || (fr.ToUserId == request.UserId && fr.FromUserId == request.ToUserId),
+             cancellation);
 
         var friendshipExists = await FriendshipExists(request.UserId, request.ToUserId, cancellation);
 

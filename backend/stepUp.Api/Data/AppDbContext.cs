@@ -9,6 +9,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
     public DbSet<DailyStepEntry> DailyStepEntries { get; set; }
     public DbSet<FriendRequest> FriendRequests { get; set; }
     public DbSet<Friendship> Friendships { get; set; }
+    public DbSet<FriendReaction> FriendReactions { get; set; }
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -16,6 +17,7 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
 
         ConfigureDailyStepEntry(builder);
         ConfigureFriends(builder);
+        ConfigureFriendReactions(builder);
     }
 
     private static void ConfigureDailyStepEntry(ModelBuilder builder)
@@ -62,5 +64,24 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
                 .HasOne<AppUser>()
                 .WithMany()
                 .HasForeignKey(f => f.FriendId);
+    }
+
+    private static void ConfigureFriendReactions(ModelBuilder builder)
+    {
+        builder.Entity<FriendReaction>()
+            .HasKey(x => new { x.UserId, x.FriendId, x.Date });
+
+        builder.Entity<FriendReaction>()
+            .HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(x => x.UserId);
+
+        builder.Entity<FriendReaction>()
+            .HasOne<AppUser>()
+            .WithMany()
+            .HasForeignKey(x => x.FriendId);
+
+        builder.Entity<FriendReaction>()
+            .HasIndex(x => new { x.UserId, x.Date });
     }
 }

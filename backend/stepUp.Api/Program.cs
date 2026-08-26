@@ -101,6 +101,13 @@ steps.MapGet("friends", async ([FromQuery] DateOnly? date, HttpContext context, 
     return TypedResults.Ok(dailySteps);
 });
 
+steps.MapGet("history", async (HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+{
+    var dailySteps = await stepsService.GetCurrentMonthStepHistoryAsync(context.GetUserId(), cancellation);
+
+    return TypedResults.Ok(dailySteps);
+});
+
 var friendRequests = app.MapGroup("friend-requests")
     .WithTags("Friend Requests");
 friendRequests.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] SendFriendRequest request, HttpContext context, IFriendRequestService friendRequestService, CancellationToken cancellation) =>
@@ -152,6 +159,14 @@ friends.MapDelete("{friendId}", async (string friendId, HttpContext context, IFr
     var result = await friendshipService.DeleteFriendshipAsync(requestWithUserId, cancellation);
 
     return result.Success ? Results.NoContent() : TypedResults.BadRequest(result.Error);
+}).WithParameterValidation();
+
+friends.MapPost("reactions/thumbs-up", async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] SendFriendReactionRequest request, HttpContext context, IFriendshipService friendshipService, CancellationToken cancellation) =>
+{
+    var requestWithUserId = request with { UserId = context.GetUserId() };
+    var result = await friendshipService.SendThumbsUpAsync(requestWithUserId, cancellation);
+
+    return result.Success ? Results.Created() : TypedResults.BadRequest(result.Error);
 }).WithParameterValidation();
 
 app.Run();

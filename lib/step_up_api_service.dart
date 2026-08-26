@@ -84,6 +84,12 @@ class StepUpApiService {
   static Future<List<StepHistoryEntry>?> getStepHistory() async {
     try {
       final response = await http.get(await _uri('/steps/history'), headers: (await HeaderBuilder().auth()).build());
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        throw Exception('Status ${response.statusCode}: ${response.body}');
+      }
+      if (response.body.isEmpty) {
+        return [];
+      }
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => StepHistoryEntry.fromJson(e)).toList();
     } catch (e) {
