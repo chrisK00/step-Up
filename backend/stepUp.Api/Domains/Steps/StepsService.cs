@@ -28,34 +28,59 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
     {
         var requestedDate = date ?? DateOnly.FromDateTime(DateTime.Today);
 
-        return await (from s in dbContext.DailyStepEntries.AsNoTracking()
-                      join u in dbContext.Users.AsNoTracking()
-                      on s.UserId equals u.UserId
-                      where s.UserId == userId && s.Date == requestedDate
-                      select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId, u.FirstName))
-                            .ToListAsync(cancellation);
+        var thumbsUpCount = await dbContext.FriendReactions.AsNoTracking()
+            .CountAsync(r => r.FriendId == userId && r.Date == requestedDate, cancellation);
+
+        var steps = await (from s in dbContext.DailyStepEntries.AsNoTracking()
+                           join u in dbContext.Users.AsNoTracking()
+                           on s.UserId equals u.UserId
+                           where s.UserId == userId && s.Date == requestedDate
+                           select new { s.Steps, s.Date, s.UserId, u.FirstName })
+                          .ToListAsync(cancellation);
+
+        return steps.Select(s => new GetDailyStepsResponse(s.Steps, s.Date, s.UserId, s.FirstName, thumbsUpCount, false)).ToList();
     }
 
     public async Task<IReadOnlyCollection<GetDailyStepsResponse>> GetFriendsDailyStepsAsync(string userId, DateOnly? date, CancellationToken cancellation)
     {
         var requestedDate = date ?? DateOnly.FromDateTime(DateTime.Today);
 
-        var friendsSteps = await (
-            from f in dbContext.Friendships.AsNoTracking()
-            let friendId = f.UserId == userId ? f.FriendId : f.UserId
+        var friendIds = await dbContext.Friendships.AsNoTracking()
+            .Where(f => f.UserId == userId || f.FriendId == userId)
+            .Select(f => f.UserId == userId ? f.FriendId : f.UserId)
+            .ToListAsync(cancellation);
 
-            join s in dbContext.DailyStepEntries.AsNoTracking()
-                on friendId equals s.UserId
-            
+        var allReactionsToday = await dbContext.FriendReactions.AsNoTracking()
+            .Where(r => r.Date == requestedDate && (friendIds.Contains(r.FriendId) || r.UserId == userId))
+            .ToListAsync(cancellation);
+
+        var reactionsCountByFriend = allReactionsToday
+            .Where(r => friendIds.Contains(r.FriendId))
+            .GroupBy(r => r.FriendId)
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        var myReactionsSet = allReactionsToday
+            .Where(r => r.UserId == userId)
+            .Select(r => r.FriendId)
+            .ToHashSet();
+
+        var friendsSteps = await (
+            from s in dbContext.DailyStepEntries.AsNoTracking()
             join u in dbContext.Users.AsNoTracking()
-                on friendId equals u.UserId
-            
-            where (f.UserId == userId || f.FriendId == userId) && s.Date == requestedDate
+                on s.UserId equals u.UserId
+            where friendIds.Contains(s.UserId) && s.Date == requestedDate
             orderby s.Steps descending
-            select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId.ToString(), u.FirstName)
+            select new { s.Steps, s.Date, s.UserId, u.FirstName }
         ).ToListAsync(cancellation);
 
-        return friendsSteps;
+        return friendsSteps.Select(s => new GetDailyStepsResponse(
+            s.Steps,
+            s.Date,
+            s.UserId.ToString(),
+            s.FirstName,
+            reactionsCountByFriend.TryGetValue(s.UserId, out var count) ? count : 0,
+            myReactionsSet.Contains(s.UserId)
+        )).ToList();
     }
 
     public async Task<IReadOnlyCollection<GetDailyStepsResponse>> GetCurrentMonthStepHistoryAsync(string userId, CancellationToken cancellation)
@@ -69,7 +94,7 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
                       on s.UserId equals u.UserId
                       where s.UserId == userId && s.Date >= startOfMonth && s.Date < endOfMonth
                       orderby s.Date descending
-                      select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId.ToString(), u.FirstName))
+                      select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId.ToString(), u.FirstName, 0, false))
                              .ToListAsync(cancellation);
     }
 }

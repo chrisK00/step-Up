@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using stepUp.Api;
 using stepUp.Api.Domains.Authentication;
 using stepUp.Api.Domains.FriendRequests;
 using stepUp.Api.Domains.Friendships;
@@ -14,12 +15,15 @@ using System.Text.Json.Serialization;
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.ConfigureHttpJsonOptions(options =>
-    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter())
-);
+{
+    options.SerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.SerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+});
 builder.Services.Configure<JsonOptions>(options =>
-
-    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter())
-);
+{
+    options.JsonSerializerOptions.Converters.Add(new JsonStringEnumConverter());
+    options.JsonSerializerOptions.Converters.Add(new DateOnlyJsonConverter());
+});
 
 builder.Logging.AddConsole();
 builder.Configuration.AddEnvironmentVariables();
@@ -168,5 +172,11 @@ friends.MapPost("reactions/thumbs-up", async ([FromBody(EmptyBodyBehavior = Empt
 
     return result.Success ? Results.Created() : TypedResults.BadRequest(result.Error);
 }).WithParameterValidation();
+
+friends.MapGet("reactions/received", async (HttpContext context, IFriendshipService friendshipService, CancellationToken cancellation) =>
+{
+    var reactions = await friendshipService.GetReceivedReactionsAsync(context.GetUserId(), cancellation);
+    return TypedResults.Ok(reactions);
+});
 
 app.Run();

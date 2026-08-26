@@ -71,6 +71,7 @@ class StepUpApiService {
   static Future<List<DailySteps>?> getSteps() async {
     try {
       final response = await http.get(await _uri('/steps'), headers: (await HeaderBuilder().auth()).build());
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => DailySteps.fromJson(e)).toList();
     } catch (e) {
@@ -84,10 +85,7 @@ class StepUpApiService {
   static Future<List<StepHistoryEntry>?> getStepHistory() async {
     try {
       final response = await http.get(await _uri('/steps/history'), headers: (await HeaderBuilder().auth()).build());
-      if (response.statusCode < 200 || response.statusCode >= 300) {
-        throw Exception('Status ${response.statusCode}: ${response.body}');
-      }
-      if (response.body.isEmpty) {
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) {
         return [];
       }
       final List<dynamic> jsonData = jsonDecode(response.body);
@@ -110,12 +108,17 @@ class StepUpApiService {
         http.get(await _uri('/steps/friends$dateQuery'), headers: headers),
       ]);
 
-      final List<dynamic> ownJson = jsonDecode(results[0].body);
-      final List<dynamic> friendsJson = jsonDecode(results[1].body);
+      List<dynamic> _decodeList(http.Response r) =>
+          (r.statusCode >= 200 && r.statusCode < 300 && r.body.trim().isNotEmpty)
+              ? jsonDecode(r.body) as List<dynamic>
+              : [];
+
+      final ownJson = _decodeList(results[0]);
+      final friendsJson = _decodeList(results[1]);
 
       final all = [
-        ...ownJson.map((e) => RacePlayer.fromJson(e)),
-        ...friendsJson.map((e) => RacePlayer.fromJson(e)),
+        ...ownJson.map((e) => RacePlayer.fromJson(e, isCurrent: true)),
+        ...friendsJson.map((e) => RacePlayer.fromJson(e, isCurrent: false)),
       ];
 
       all.sort((a, b) => b.steps.compareTo(a.steps));
@@ -134,6 +137,7 @@ class StepUpApiService {
         await _uri('/users?username=$username'),
         headers: (await HeaderBuilder().auth()).build(),
       );
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => UsersSearchResponse.fromJson(e)).toList();
     } catch (e) {
@@ -190,6 +194,7 @@ class StepUpApiService {
 
     try {
       final response = await http.get(url, headers: (await HeaderBuilder().auth()).build());
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => FriendRequestsResponse.fromJson(e)).toList();
     } catch (e) {
@@ -203,6 +208,7 @@ class StepUpApiService {
   static Future<List<FriendsResponse>?> getFriends() async {
     try {
       final response = await http.get(await _uri('/friends'), headers: (await HeaderBuilder().auth()).build());
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => FriendsResponse.fromJson(e)).toList();
     } catch (e) {
@@ -215,16 +221,41 @@ class StepUpApiService {
 
   static Future<http.Response?> sendThumbsUpToFriend(String friendId) async {
     try {
-      return await http.post(
+      final response = await http.post(
         await _uri('/friends/reactions/thumbs-up'),
         headers: (await HeaderBuilder().jsonContent().auth()).build(),
         body: jsonEncode(<String, String>{'friendId': friendId}),
       );
+      debugPrint('sendThumbsUpToFriend: status=${response.statusCode} body=${response.body}');
+      if (response.statusCode < 200 || response.statusCode >= 300) {
+        Fluttertoast.showToast(msg: "Failed: ${response.statusCode} ${response.body}");
+      }
+      return response;
     } catch (e) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
       await AppLogger.logError(e);
       return null;
+    }
+  }
+
+  static Future<List<ReceivedReactionResponse>> getReceivedReactions() async {
+    try {
+      final response = await http.get(
+        await _uri('/friends/reactions/received'),
+        headers: (await HeaderBuilder().auth()).build(),
+      );
+      debugPrint('getReceivedReactions: status=${response.statusCode} body=${response.body}');
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) {
+        return [];
+      }
+      final List<dynamic> jsonData = jsonDecode(response.body);
+      return jsonData.map((e) => ReceivedReactionResponse.fromJson(e)).toList();
+    } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
+      debugPrint('HTTP Error: $e');
+      await AppLogger.logError(e);
+      return [];
     }
   }
 
@@ -243,6 +274,7 @@ class StepUpApiService {
   static Future<List<DailySteps>?> getFriendsSteps() async {
     try {
       final response = await http.get(await _uri('/steps/friends'), headers: (await HeaderBuilder().auth()).build());
+      if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => DailySteps.fromJson(e)).toList();
     } catch (e) {

@@ -40,15 +40,25 @@ class FriendRequestsResponse {
 class FriendsResponse {
   final String id;
   final String username;
-  final bool hasThumbsUpToday;
 
-  FriendsResponse({required this.id, required this.username, required this.hasThumbsUpToday});
+  FriendsResponse({required this.id, required this.username});
 
   factory FriendsResponse.fromJson(Map<String, dynamic> json) {
     return FriendsResponse(
       id: json['userId'],
       username: json["firstName"],
-      hasThumbsUpToday: json['hasThumbsUpToday'] as bool? ?? false,
+    );
+  }
+}
+
+class ReceivedReactionResponse {
+  final String fromUsername;
+
+  ReceivedReactionResponse({required this.fromUsername});
+
+  factory ReceivedReactionResponse.fromJson(Map<String, dynamic> json) {
+    return ReceivedReactionResponse(
+      fromUsername: (json['fromUsername'] ?? json['FromUsername'] ?? '') as String,
     );
   }
 }
