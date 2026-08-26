@@ -1,5 +1,6 @@
 import 'package:health/health.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:step_up/app_settings.dart';
 
 class HealthHelper {
   static Future<bool> authenticateHealth(Health health) async {
@@ -40,9 +41,11 @@ class HealthHelper {
 
     // List<HealthDataPoint> uniqueData = health.removeDuplicates(healthData);
 
+    final sourceName = await AppSettings.getHealthSourceName();
+
     var totalSteps = healthData.fold<num>(0, (sum, point) {
       final value = point.value;
-      if (point.sourceName.contains("com.google.android.apps.fitness") && value is NumericHealthValue) {
+      if (point.sourceName.contains(sourceName) && value is NumericHealthValue) {
         return sum + value.numericValue;
       }
 
