@@ -117,8 +117,8 @@ class StepUpApiService {
       final friendsJson = _decodeList(results[1]);
 
       final all = [
-        ...ownJson.map((e) => RacePlayer.fromJson(e)),
-        ...friendsJson.map((e) => RacePlayer.fromJson(e)),
+        ...ownJson.map((e) => RacePlayer.fromJson(e, isCurrent: true)),
+        ...friendsJson.map((e) => RacePlayer.fromJson(e, isCurrent: false)),
       ];
 
       all.sort((a, b) => b.steps.compareTo(a.steps));
@@ -240,6 +240,7 @@ class StepUpApiService {
         await _uri('/friends/reactions/received'),
         headers: (await HeaderBuilder().auth()).build(),
       );
+      debugPrint('getReceivedReactions: status=${response.statusCode} body=${response.body}');
       if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) {
         return [];
       }

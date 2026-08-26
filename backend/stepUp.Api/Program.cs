@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.ModelBinding;
+using stepUp.Api;
 using stepUp.Api.Domains.Authentication;
 using stepUp.Api.Domains.FriendRequests;
 using stepUp.Api.Domains.Friendships;

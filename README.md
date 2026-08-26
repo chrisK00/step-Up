@@ -143,6 +143,24 @@ If something goes wrong, use the Settings page to share the app log file.
     - `AchievementsPage`: Verify correct tier cards render and match expected monthly step thresholds.
     - `FriendsWidgetState`: Verify friend list rendering, search field input, copy-username clipboard action, and toast triggers.
 
+### 4. Local Development & Multi-Account / Friend Testing Strategy
+- **Connecting the Mobile App to Local Backend (`localhost` vs Android Emulator)**:
+  - **In-App Settings**: Navigate to the **Settings** tab in the app to override the API URL:
+    - **Android Emulator**: Use `http://10.0.2.2:5208` (maps to host machine's `localhost:5208`).
+    - **Physical Android Device on same Wi-Fi**: Use `http://<YOUR_LAN_IP>:5208` (e.g. `http://192.168.1.100:5208`).
+    - **Default Prod**: `https://stepup.racknerd.chrispys.top`.
+  - **Ensure Backend Listens on All Interfaces**:
+    In `Properties/launchSettings.json` or `appsettings.json`, ensure applicationUrl is set to `http://0.0.0.0:5208` (or `http://*:5208`) so mobile devices on LAN can connect.
+
+- **Easily Testing Friendships & Interactions without multiple physical devices**:
+  - **Strategy A: Dev Test Users & Seed Data (Recommended for Local Dev)**:
+    - The backend already has `TestTokenAuthMiddleware` with a test user (`test` / `AuthConstants.TestUserId`).
+    - Extend `DataSeed.cs` to seed 2-3 mock users (`alice`, `bob`, `charlie`) with pre-configured step entries and friendships in local SQLite `App.db`.
+  - **Strategy B: Developer Mock Switch / Account Switcher (Debug Only)**:
+    - Add an "Account Switcher" or "Mock User Sign-In" option in debug mode on the Sign In / Settings screen. This allows testing sending/receiving friend requests, thumbs-up reactions, and race leaderboards without having to register separate Google/Firebase accounts.
+  - **Strategy C: Firebase Auth Emulator**:
+    - Enable Firebase Authentication Emulator in `main.dart` with `FirebaseAuth.instance.useAuthEmulator('10.0.2.2', 9099)` when running locally. This enables instant creation of fake test users without real Google sign-ins.
+
 ---
 
 ## 📌 Links, References & Context

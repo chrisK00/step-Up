@@ -62,7 +62,9 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 
   void _onPlayerTap(RacePlayer player) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-    if (player.userId == currentUserId || !_isToday) return;
+    final isCurrent = player.isCurrent ||
+        (currentUserId != null && player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
+    if (isCurrent || !_isToday) return;
 
     final friend = _friends.cast<FriendsResponse?>().firstWhere(
           (f) => f?.id == player.userId,
@@ -145,20 +147,20 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
                   child: Container(
                     padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                     decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 177, 207, 177),
+                      color: const Color.fromARGB(255, 255, 243, 204),
                       borderRadius: BorderRadius.circular(20),
                     ),
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        const Icon(Icons.thumb_up, size: 16, color: Color.fromARGB(255, 75, 88, 75)),
+                        const Icon(Icons.thumb_up, size: 16, color: Colors.amber),
                         const SizedBox(width: 4),
                         Text(
                           '${_receivedReactions.length}',
                           style: const TextStyle(
                             fontSize: 13,
                             fontWeight: FontWeight.w600,
-                            color: Color.fromARGB(255, 75, 88, 75),
+                            color: Color.fromARGB(255, 179, 116, 0),
                           ),
                         ),
                       ],
@@ -181,18 +183,13 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
               itemBuilder: (context, index) {
                 final player = _players[index];
                 final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                final isCurrent = player.userId == currentUserId;
+                final isCurrent = player.isCurrent ||
+                    (currentUserId != null &&
+                        player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
 
-                int likesCount = 0;
-                if (isCurrent) {
-                  likesCount = _receivedReactions.length;
-                } else {
-                  final friend = _friends.cast<FriendsResponse?>().firstWhere(
-                        (f) => f?.id == player.userId,
-                        orElse: () => null,
-                      );
-                  likesCount = (friend?.hasThumbsUpToday ?? false) ? 1 : 0;
-                }
+                final int likesCount = isCurrent
+                    ? (_receivedReactions.isNotEmpty ? _receivedReactions.length : player.thumbsUpCount)
+                    : player.thumbsUpCount;
 
                 return _RaceLane(
                   rank: index + 1,
@@ -341,7 +338,7 @@ class _RaceLane extends StatelessWidget {
                           const Icon(
                             Icons.thumb_up,
                             size: 24,
-                            color: Color.fromARGB(255, 75, 88, 75),
+                            color: Colors.amber,
                           ),
                           if (likesCount > 1) ...[
                             const SizedBox(width: 3),
@@ -349,8 +346,8 @@ class _RaceLane extends StatelessWidget {
                               '($likesCount)',
                               style: const TextStyle(
                                 fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: Color.fromARGB(255, 75, 88, 75),
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber,
                               ),
                             ),
                           ],
@@ -402,13 +399,7 @@ class _ThumbsUpSheet extends StatefulWidget {
 
 class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
   bool _loading = false;
-  late bool _alreadySent;
-
-  @override
-  void initState() {
-    super.initState();
-    _alreadySent = widget.friend.hasThumbsUpToday;
-  }
+  bool _alreadySent = false;
 
   @override
   Widget build(BuildContext context) {
@@ -488,7 +479,7 @@ class _ReceivedReactionsSheet extends StatelessWidget {
           Row(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Icon(Icons.thumb_up, size: 20, color: Color.fromARGB(255, 75, 88, 75)),
+              const Icon(Icons.thumb_up, size: 20, color: Colors.amber),
               const SizedBox(width: 8),
               Text('Liked today', style: theme.textTheme.titleLarge),
             ],

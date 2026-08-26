@@ -23,42 +23,52 @@ internal class FriendshipService(AppDbContext dbContext, IUnitOfWork unitOfWork)
 
     public async Task<IEnumerable<GetFriendshipsResponse>> GetFriendshipsAsync(string userId, CancellationToken cancellation)
     {
-        var today = DateOnly.FromDateTime(DateTime.Today);
-
         var friendIds = await dbContext.Friendships.AsNoTracking()
             .Where(f => f.UserId == userId || f.FriendId == userId)
             .Select(f => f.UserId == userId ? f.FriendId : f.UserId)
             .ToListAsync(cancellation);
 
-        var thumbsUpToday = await dbContext.FriendReactions.AsNoTracking()
-            .Where(r => r.UserId == userId && r.Date == today && friendIds.Contains(r.FriendId))
-            .Select(r => r.FriendId)
-            .ToHashSetAsync(cancellation);
-
         return await dbContext.Users.AsNoTracking()
             .Where(u => friendIds.Contains(u.UserId))
             .OrderBy(u => u.FirstName)
-            .Select(u => new GetFriendshipsResponse(u.UserId, u.FirstName, thumbsUpToday.Contains(u.UserId)))
+            .Select(u => new GetFriendshipsResponse(u.UserId, u.FirstName))
             .ToListAsync(cancellation);
     }
 
     public async Task<IEnumerable<ReceivedReactionResponse>> GetReceivedReactionsAsync(string userId, CancellationToken cancellation)
     {
         var today = DateOnly.FromDateTime(DateTime.Today);
-        return await (
-            from r in dbContext.FriendReactions.AsNoTracking()
-            where r.FriendId == userId && r.Date == today
-            join u in dbContext.Users.AsNoTracking()
-                on r.UserId equals u.UserId
-            select new ReceivedReactionResponse(u.FirstName))
+        var normalizedUserId = userId.Trim().ToLower();
+
+        var reactions = await dbContext.FriendReactions.AsNoTracking()
+            .Where(r => r.FriendId.ToLower() == normalizedUserId && r.Date == today)
             .ToListAsync(cancellation);
+
+        if (reactions.Count == 0)
+        {
+            return [];
+        }
+
+        var senderIds = reactions.Select(r => r.UserId.ToLower()).ToHashSet();
+        var senders = await dbContext.Users.AsNoTracking()
+            .Where(u => senderIds.Contains(u.UserId.ToLower()))
+            .ToDictionaryAsync(u => u.UserId.ToLower(), u => u.FirstName, cancellation);
+
+        return reactions.Select(r =>
+        {
+            senders.TryGetValue(r.UserId.ToLower(), out var firstName);
+            return new ReceivedReactionResponse(firstName ?? "Friend");
+        }).ToList();
     }
 
     public async Task<CommandResult> SendThumbsUpAsync(SendFriendReactionRequest request, CancellationToken cancellation)
     {
         var (userIdSmaller, userIdLarger) = UserIdUtil.OrderUserIds(request.UserId, request.FriendId);
         var friendshipExists = await dbContext.Friendships.AsNoTracking()
-            .AnyAsync(f => f.UserId == userIdSmaller && f.FriendId == userIdLarger, cancellation);
+            .AnyAsync(f =>
+                (f.UserId.ToLower() == userIdSmaller.ToLower() && f.FriendId.ToLower() == userIdLarger.ToLower()) ||
+                (f.UserId.ToLower() == request.UserId.ToLower() && f.FriendId.ToLower() == request.FriendId.ToLower()) ||
+                (f.UserId.ToLower() == request.FriendId.ToLower() && f.FriendId.ToLower() == request.UserId.ToLower()), cancellation);
         if (!friendshipExists)
         {
             return CommandResult.Fail("Friendship does not exist");
@@ -66,7 +76,9 @@ internal class FriendshipService(AppDbContext dbContext, IUnitOfWork unitOfWork)
 
         var today = DateOnly.FromDateTime(DateTime.Today);
         var existing = await dbContext.FriendReactions.SingleOrDefaultAsync(x =>
-            x.UserId == request.UserId && x.FriendId == request.FriendId && x.Date == today, cancellation);
+            x.UserId.ToLower() == request.UserId.ToLower() &&
+            x.FriendId.ToLower() == request.FriendId.ToLower() &&
+            x.Date == today, cancellation);
 
         if (existing == null)
         {

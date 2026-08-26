@@ -131,53 +131,35 @@ class _FriendsWidgetState extends State<FriendsWidgetState> {
             )));
   }
 
-// TODO borde använda template för alla är typ samma förutom icon mm
   ListTile createFriendTile(FriendsResponse fr, ThemeData theme) {
     return ListTile(
         title: Text(fr.username),
-        trailing: Row(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            IconButton(
-              onPressed: fr.hasThumbsUpToday
-                  ? null
-                  : () async {
-                      await StepUpApiService.sendThumbsUpToFriend(fr.id);
-                      await _reload();
-                    },
-              icon: Icon(
-                fr.hasThumbsUpToday ? Icons.thumb_up : Icons.thumb_up_alt_outlined,
-                color: fr.hasThumbsUpToday ? theme.colorScheme.primary : Colors.black,
-              ),
-            ),
-            IconButton(
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (ctx) => AlertDialog(
-                      title: const Text('Remove friend'),
-                      content: Text('Remove ${fr.username} from your friends?'),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(false),
-                          child: const Text('Cancel'),
-                        ),
-                        TextButton(
-                          onPressed: () => Navigator.of(ctx).pop(true),
-                          style: TextButton.styleFrom(foregroundColor: Colors.red),
-                          child: const Text('Remove'),
-                        ),
-                      ],
+        trailing: IconButton(
+            onPressed: () async {
+              final confirmed = await showDialog<bool>(
+                context: context,
+                builder: (ctx) => AlertDialog(
+                  title: const Text('Remove friend'),
+                  content: Text('Remove ${fr.username} from your friends?'),
+                  actions: [
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(false),
+                      child: const Text('Cancel'),
                     ),
-                  );
-                  if (confirmed == true) await deleteFriendship(fr);
-                },
-                icon: const Icon(
-                  FontAwesomeIcons.xmark,
-                  color: Colors.red,
-                )),
-          ],
-        ));
+                    TextButton(
+                      onPressed: () => Navigator.of(ctx).pop(true),
+                      style: TextButton.styleFrom(foregroundColor: Colors.red),
+                      child: const Text('Remove'),
+                    ),
+                  ],
+                ),
+              );
+              if (confirmed == true) await deleteFriendship(fr);
+            },
+            icon: const Icon(
+              FontAwesomeIcons.xmark,
+              color: Colors.red,
+            )));
   }
 
   Future<void> initFriendRequests() async {
