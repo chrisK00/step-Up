@@ -39,6 +39,18 @@ internal class FriendshipService(AppDbContext dbContext, IUnitOfWork unitOfWork)
          .ToListAsync(cancellation);
     }
 
+    public async Task<IEnumerable<ReceivedReactionResponse>> GetReceivedReactionsAsync(string userId, CancellationToken cancellation)
+    {
+        var today = DateOnly.FromDateTime(DateTime.Today);
+        return await (
+            from r in dbContext.FriendReactions.AsNoTracking()
+            where r.FriendId == userId && r.Date == today
+            join u in dbContext.Users.AsNoTracking()
+                on r.UserId equals u.UserId
+            select new ReceivedReactionResponse(u.FirstName))
+            .ToListAsync(cancellation);
+    }
+
     public async Task<CommandResult> SendThumbsUpAsync(SendFriendReactionRequest request, CancellationToken cancellation)
     {
         var (userIdSmaller, userIdLarger) = UserIdUtil.OrderUserIds(request.UserId, request.FriendId);

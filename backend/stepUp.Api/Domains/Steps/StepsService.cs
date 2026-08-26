@@ -40,17 +40,16 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
     {
         var requestedDate = date ?? DateOnly.FromDateTime(DateTime.Today);
 
-        var friendsSteps = await (
-            from f in dbContext.Friendships.AsNoTracking()
-            let friendId = f.UserId == userId ? f.FriendId : f.UserId
+        var friendIds = await dbContext.Friendships.AsNoTracking()
+            .Where(f => f.UserId == userId || f.FriendId == userId)
+            .Select(f => f.UserId == userId ? f.FriendId : f.UserId)
+            .ToListAsync(cancellation);
 
-            join s in dbContext.DailyStepEntries.AsNoTracking()
-                on friendId equals s.UserId
-            
+        var friendsSteps = await (
+            from s in dbContext.DailyStepEntries.AsNoTracking()
             join u in dbContext.Users.AsNoTracking()
-                on friendId equals u.UserId
-            
-            where (f.UserId == userId || f.FriendId == userId) && s.Date == requestedDate
+                on s.UserId equals u.UserId
+            where friendIds.Contains(s.UserId) && s.Date == requestedDate
             orderby s.Steps descending
             select new GetDailyStepsResponse(s.Steps, s.Date, s.UserId.ToString(), u.FirstName)
         ).ToListAsync(cancellation);

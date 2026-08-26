@@ -228,6 +228,22 @@ class StepUpApiService {
     }
   }
 
+  static Future<List<ReceivedReactionResponse>> getReceivedReactions() async {
+    try {
+      final response = await http.get(
+        await _uri('/friends/reactions/received'),
+        headers: (await HeaderBuilder().auth()).build(),
+      );
+      final List<dynamic> jsonData = jsonDecode(response.body);
+      return jsonData.map((e) => ReceivedReactionResponse.fromJson(e)).toList();
+    } catch (e) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
+      debugPrint('HTTP Error: $e');
+      await AppLogger.logError(e);
+      return [];
+    }
+  }
+
   static Future deleteFriendship(String userId) async {
     final headers = (await HeaderBuilder().auth()).build();
     try {

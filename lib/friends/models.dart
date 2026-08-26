@@ -52,3 +52,13 @@ class FriendsResponse {
     );
   }
 }
+
+class ReceivedReactionResponse {
+  final String fromUsername;
+
+  ReceivedReactionResponse({required this.fromUsername});
+
+  factory ReceivedReactionResponse.fromJson(Map<String, dynamic> json) {
+    return ReceivedReactionResponse(fromUsername: json['fromUsername']);
+  }
+}

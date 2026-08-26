@@ -18,6 +18,7 @@ class HealthStepsWidget extends StatefulWidget {
 class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   List<RacePlayer> _players = [];
   List<FriendsResponse> _friends = [];
+  List<ReceivedReactionResponse> _receivedReactions = [];
   String _status = 'Loading...';
   bool _isDisposed = false;
   final Health _health = Health();
@@ -49,11 +50,13 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     final results = await Future.wait([
       StepUpApiService.getRaceLeaderboard(date: _selectedDate),
       StepUpApiService.getFriends(),
+      StepUpApiService.getReceivedReactions(),
     ]);
 
     safeSetState(() {
       _players = results[0] as List<RacePlayer>;
       _friends = (results[1] as List<FriendsResponse>?) ?? [];
+      _receivedReactions = results[2] as List<ReceivedReactionResponse>;
     });
   }
 
@@ -69,6 +72,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 
     showModalBottomSheet(
       context: context,
+      useSafeArea: true,
       builder: (ctx) => _ThumbsUpSheet(
         friend: friend,
         onThumbsUp: () async {
@@ -76,6 +80,14 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
           await _initSteps();
         },
       ),
+    );
+  }
+
+  void _showReceivedReactionsSheet() {
+    showModalBottomSheet(
+      context: context,
+      useSafeArea: true,
+      builder: (ctx) => _ReceivedReactionsSheet(reactions: _receivedReactions),
     );
   }
 
@@ -126,7 +138,36 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              if (_status.isNotEmpty) Text(_status),
+              if (_receivedReactions.isNotEmpty)
+                GestureDetector(
+                  onTap: _showReceivedReactionsSheet,
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                    decoration: BoxDecoration(
+                      color: const Color.fromARGB(255, 177, 207, 177),
+                      borderRadius: BorderRadius.circular(20),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        const Icon(Icons.thumb_up, size: 16, color: Color.fromARGB(255, 75, 88, 75)),
+                        const SizedBox(width: 4),
+                        Text(
+                          '${_receivedReactions.length}',
+                          style: const TextStyle(
+                            fontSize: 13,
+                            fontWeight: FontWeight.w600,
+                            color: Color.fromARGB(255, 75, 88, 75),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ),
+              if (_status.isNotEmpty) ...[
+                const SizedBox(width: 8),
+                Text(_status),
+              ],
             ],
           ),
         ),
@@ -361,6 +402,51 @@ class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
                 ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
                 : Icon(_alreadySent ? Icons.thumb_up : Icons.thumb_up_alt_outlined),
             label: Text(_alreadySent ? 'Already sent today' : 'Send thumbs up'),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _ReceivedReactionsSheet extends StatelessWidget {
+  final List<ReceivedReactionResponse> reactions;
+
+  const _ReceivedReactionsSheet({required this.reactions});
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Padding(
+      padding: const EdgeInsets.fromLTRB(24, 20, 24, 32),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Container(
+            width: 40,
+            height: 4,
+            margin: const EdgeInsets.only(bottom: 16),
+            decoration: BoxDecoration(
+              color: Colors.grey.shade300,
+              borderRadius: BorderRadius.circular(2),
+            ),
+          ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              const Icon(Icons.thumb_up, size: 20, color: Color.fromARGB(255, 75, 88, 75)),
+              const SizedBox(width: 8),
+              Text('Liked today', style: theme.textTheme.titleLarge),
+            ],
+          ),
+          const SizedBox(height: 16),
+          ...reactions.map(
+            (r) => ListTile(
+              leading: const Icon(Icons.person),
+              title: Text(r.fromUsername),
+              dense: true,
+            ),
           ),
         ],
       ),
