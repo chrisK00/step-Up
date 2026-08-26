@@ -51,16 +51,22 @@ If you are installing a debug build, Android may treat it differently from the P
 ## Backend .NET 8 Minimal Web API
 - Requires a *secrets/firebase-service-account.json* from firebase
 - Requires the following app configuration to be provided
+```bash
 dotnet user-secrets init
 dotnet user-secrets set "testToken" "<password>"
+```
 
 # Developing
 ## Frontend
 Deploy:
+```bash
 flutter build apk --split-per-abi
+```
 
 Changing app icon:
+```bash
 dart run flutter_launcher_icons
+```
 
 ### Debugging prod
 Just run F5
@@ -72,3 +78,73 @@ If something goes wrong, use the Settings page to share the app log file.
 - Adding migrations:
 1. dotnet ef migrations add <MigrationName> -o Data/Migrations
 2. dotnet ef database update
+
+---
+
+# 📋 Roadmap & Backlog (Ready to Pick)
+
+### 1. Refactor Backend to Clean Architecture
+- **Goal**: Separate concerns into decoupled class libraries adhering to Clean Architecture principles.
+- **Reference**: [Clean Architecture & JWT Inspiration](https://www.youtube.com/watch?v=xBuLWaDcvu0)
+- **Target Project Structure**:
+  - `stepUp.Domain`: Pure domain entities (`AppUser`, `DailyStepEntry`, `Friendship`, `FriendRequest`, `FriendReaction`), domain exceptions, and enums (zero external dependencies).
+  - `stepUp.Application`: Business logic contracts (`IStepsService`, `IFriendshipService`, `IUnitOfWork`), DTOs/request/response models, input validation, and command/query handlers.
+  - `stepUp.Infrastructure`: Database context (`AppDbContext`), EF Core configurations & migrations, unit of work implementation, and external service clients (e.g. Firebase Admin).
+  - `stepUp.Api`: Minimal API endpoints, dependency injection wiring (`Program.cs`, service extensions), Swagger configuration, and middleware.
+- **Implementation Steps**:
+  1. Create solution structure with `dotnet new classlib` for `Domain`, `Application`, and `Infrastructure`.
+  2. Move entities and exceptions to `stepUp.Domain`.
+  3. Move interfaces and DTO records to `stepUp.Application` (reference `Domain`).
+  4. Move `AppDbContext`, migrations, and external services to `stepUp.Infrastructure` (reference `Application` & `Domain`).
+  5. Keep minimal API endpoint mapping and DI container registrations in `stepUp.Api` (reference `Infrastructure` & `Application`).
+  6. Verify EF Core CLI commands and migration pathways.
+
+### 2. Standardize Authentication & Authorization via JWT Bearer Config
+- **Goal**: Replace custom `FirebaseAuthMiddleware` and `TestTokenAuthMiddleware` with ASP.NET Core's built-in `JwtBearer` authentication pipeline.
+- **Implementation Steps**:
+  1. Add `Microsoft.AspNetCore.Authentication.JwtBearer` package to the backend.
+  2. Configure JWT options in `Program.cs` / service extension:
+     ```csharp
+     builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+         .AddJwtBearer(options =>
+         {
+             options.Authority = $"https://securetoken.google.com/{firebaseProjectId}";
+             options.TokenValidationParameters = new TokenValidationParameters
+             {
+                 ValidateIssuer = true,
+                 ValidIssuer = $"https://securetoken.google.com/{firebaseProjectId}",
+                 ValidateAudience = true,
+                 ValidAudience = firebaseProjectId,
+                 ValidateLifetime = true,
+             };
+             // Optional: Handle dev/test tokens via custom events or a separate dev scheme
+         });
+     builder.Services.AddAuthorization();
+     ```
+  3. Replace custom `app.UseWhen(...)` middleware invocations with standard `app.UseAuthentication()` and `app.UseAuthorization()`.
+  4. Protect endpoints with `.RequireAuthorization()` and read identity directly from `ClaimsPrincipal` / `context.User`.
+  5. Configure Swagger to include standard JWT Bearer token authorize button.
+
+### 3. Add Comprehensive Tests (Frontend & Backend)
+- **Goal**: Ensure reliability and prevent regressions across services, endpoints, and UI widgets.
+- **Backend Testing Plan**:
+  - **Unit Tests (`stepUp.UnitTests` with xUnit, FluentAssertions, Moq/NSubstitute)**:
+    - `StepsServiceTests`: Verify step aggregation, single-entry updates, and monthly date filtering bounds.
+    - `FriendshipServiceTests` & `FriendRequestServiceTests`: Validate friend request sending, accepting, duplicate prevention, and deletion.
+  - **Integration Tests (`stepUp.IntegrationTests` with `WebApplicationFactory<Program>`, SQLite In-Memory / Testcontainers)**:
+    - Test authenticated HTTP requests across minimal API route groups (`/steps`, `/friends`, `/friend-requests`).
+    - Verify auth rejection on missing or invalid JWT tokens.
+- **Frontend Testing Plan (Flutter `test/` & `testWidgets/`)**:
+  - **Unit Tests**:
+    - `StepUpApiService`: Mock HTTP responses and verify JSON serialization/deserialization for all models.
+    - `AppSettings`: Verify secure storage read/write/fallback behaviors.
+    - `AppLogger`: Test log trimming logic (ensuring files over 1MB truncate to 2000 lines).
+  - **Widget Tests**:
+    - `AchievementsPage`: Verify correct tier cards render and match expected monthly step thresholds.
+    - `FriendsWidgetState`: Verify friend list rendering, search field input, copy-username clipboard action, and toast triggers.
+
+---
+
+## 📌 Links, References & Context
+* **Health Package**: https://pub.dev/packages/health
+* **Clean Architecture & JWT Inspiration Video**: https://www.youtube.com/watch?v=xBuLWaDcvu0
