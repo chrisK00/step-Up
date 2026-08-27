@@ -8,7 +8,7 @@ public class DailyStepEntry
     public int Id { get; set; }
 
     public int Steps { get; set; }
-    public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.Today);
+    public DateOnly Date { get; set; } = DateOnly.FromDateTime(DateTime.UtcNow);
 
     [Required]
     public string UserId { get; set; }

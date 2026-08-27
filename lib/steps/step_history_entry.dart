@@ -12,11 +12,19 @@ class StepHistoryEntry {
   });
 
   factory StepHistoryEntry.fromJson(Map<String, dynamic> json) {
+    final rawDate = json['date'] ?? json['Date'];
+    DateTime parsedDate;
+    if (rawDate != null) {
+      parsedDate = DateTime.tryParse(rawDate.toString()) ?? DateTime.now();
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return StepHistoryEntry(
-      firstName: json['firstName'],
-      steps: json['steps'],
-      userId: json['userId'],
-      date: DateTime.parse(json['date']),
+      firstName: (json['firstName'] ?? json['FirstName'] ?? '').toString(),
+      steps: ((json['steps'] ?? json['Steps'] ?? 0) as num).toInt(),
+      userId: (json['userId'] ?? json['UserId'] ?? '').toString(),
+      date: parsedDate,
     );
   }
 }

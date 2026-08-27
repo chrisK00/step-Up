@@ -3,10 +3,10 @@ import 'package:firebase_auth/firebase_auth.dart';
 class HeaderBuilder {
   final Map<String, String> _headers = {};
 
-  static Future<String> getToken() async {
+  static Future<String?> getToken() async {
     final currentUser = FirebaseAuth.instance.currentUser;
-    final token = await currentUser!.getIdToken();
-    return token!;
+    if (currentUser == null) return null;
+    return await currentUser.getIdToken();
   }
 
   HeaderBuilder jsonContent() {
@@ -16,14 +16,17 @@ class HeaderBuilder {
 
   Future<HeaderBuilder> auth() async {
     final token = await getToken();
-    _headers['Authorization'] = token;
+    if (token != null) {
+      _headers['Authorization'] = token;
+    }
     return this;
   }
 
   Future<HeaderBuilder> authWithToken(String? token) async {
     token ??= await getToken();
-
-    _headers['Authorization'] = token;
+    if (token != null) {
+      _headers['Authorization'] = token;
+    }
     return this;
   }
 

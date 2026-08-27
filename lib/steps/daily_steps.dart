@@ -7,9 +7,9 @@ class DailySteps {
 
   factory DailySteps.fromJson(Map<String, dynamic> json) {
     return DailySteps(
-      firstName: json['firstName'],
-      steps: json['steps'],
-      userId: json["userId"],
+      firstName: (json['firstName'] ?? json['FirstName'] ?? json['username'] ?? '').toString(),
+      steps: ((json['steps'] ?? json['Steps'] ?? 0) as num).toInt(),
+      userId: (json['userId'] ?? json['UserId'] ?? json['id'] ?? '').toString(),
     );
   }
 }

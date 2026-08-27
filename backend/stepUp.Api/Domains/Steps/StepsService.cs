@@ -8,8 +8,10 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 {
     public async Task AddDailyStepsAsync(AddDailyStepsRequest request, CancellationToken cancellation)
     {
+        var targetDate = request.Date ?? DateOnly.FromDateTime(DateTime.UtcNow);
+
         var existingStepEntryForToday = await dbContext.DailyStepEntries
-            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Date == DateOnly.FromDateTime(DateTime.Today), cancellation);
+            .SingleOrDefaultAsync(x => x.UserId == request.UserId && x.Date == targetDate, cancellation);
 
         if (existingStepEntryForToday != null)
         {
@@ -17,8 +19,35 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
         }
         else
         {
-            var stepEntry = new DailyStepEntry { Steps = request.Steps, UserId = request.UserId };
+            var stepEntry = new DailyStepEntry { Steps = request.Steps, UserId = request.UserId, Date = targetDate };
             await dbContext.DailyStepEntries.AddAsync(stepEntry, cancellation);
+        }
+
+        await unitOfWork.SaveChangesAsync(cancellation);
+    }
+
+    public async Task BulkAddDailyStepsAsync(BulkAddDailyStepsRequest request, CancellationToken cancellation)
+    {
+        var dates = request.Entries.Select(e => e.Date).ToList();
+
+        var existing = await dbContext.DailyStepEntries
+            .Where(x => x.UserId == request.UserId && dates.Contains(x.Date))
+            .ToListAsync(cancellation);
+
+        var existingByDate = existing.ToDictionary(x => x.Date);
+
+        foreach (var entry in request.Entries)
+        {
+            if (existingByDate.TryGetValue(entry.Date, out var row))
+            {
+                row.Steps = entry.Steps;
+            }
+            else
+            {
+                await dbContext.DailyStepEntries.AddAsync(
+                    new DailyStepEntry { Steps = entry.Steps, UserId = request.UserId, Date = entry.Date },
+                    cancellation);
+            }
         }
 
         await unitOfWork.SaveChangesAsync(cancellation);
@@ -26,7 +55,7 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 
     public async Task<IReadOnlyCollection<GetDailyStepsResponse>> GetDailyStepsAsync(string userId, DateOnly? date, CancellationToken cancellation)
     {
-        var requestedDate = date ?? DateOnly.FromDateTime(DateTime.Today);
+        var requestedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
 
         var thumbsUpCount = await dbContext.FriendReactions.AsNoTracking()
             .CountAsync(r => r.FriendId == userId && r.Date == requestedDate, cancellation);
@@ -43,7 +72,7 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 
     public async Task<IReadOnlyCollection<GetDailyStepsResponse>> GetFriendsDailyStepsAsync(string userId, DateOnly? date, CancellationToken cancellation)
     {
-        var requestedDate = date ?? DateOnly.FromDateTime(DateTime.Today);
+        var requestedDate = date ?? DateOnly.FromDateTime(DateTime.UtcNow);
 
         var friendIds = await dbContext.Friendships.AsNoTracking()
             .Where(f => f.UserId == userId || f.FriendId == userId)
@@ -85,7 +114,7 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 
     public async Task<IReadOnlyCollection<GetDailyStepsResponse>> GetCurrentMonthStepHistoryAsync(string userId, CancellationToken cancellation)
     {
-        var now = DateTime.Today;
+        var now = DateTime.UtcNow;
         var startOfMonth = new DateOnly(now.Year, now.Month, 1);
         var endOfMonth = startOfMonth.AddMonths(1);
 

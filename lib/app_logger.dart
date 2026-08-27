@@ -5,7 +5,8 @@ import 'package:flutter/foundation.dart';
 import 'package:path_provider/path_provider.dart';
 
 class AppLogger {
-  static const String _logFileName = 'step_up.log';
+  static const String _logFileName = 'step_up.txt';
+  static const String _legacyLogFileName = 'step_up.log';
   static IOSink? _sink;
 
   static const int _maxFileSizeBytes = 1024 * 1024; // 1 MB
@@ -14,6 +15,23 @@ class AppLogger {
   static Future<File> _logFile() async {
     final dir = await getApplicationDocumentsDirectory();
     return File('${dir.path}/$_logFileName');
+  }
+
+  static Future<void> _migrateLegacyLogFile() async {
+    try {
+      final dir = await getApplicationDocumentsDirectory();
+      final legacyFile = File('${dir.path}/$_legacyLogFileName');
+      if (await legacyFile.exists()) {
+        final targetFile = File('${dir.path}/$_logFileName');
+        final legacyContent = await legacyFile.readAsString();
+        if (legacyContent.isNotEmpty) {
+          await targetFile.writeAsString(legacyContent, mode: FileMode.append);
+        }
+        await legacyFile.delete();
+      }
+    } catch (e) {
+      debugPrint('AppLogger failed to migrate legacy log file: $e');
+    }
   }
 
   static Future<void> _trimIfNeeded(File file) async {
@@ -33,6 +51,7 @@ class AppLogger {
   }
 
   static Future<void> init() async {
+    await _migrateLegacyLogFile();
     final file = await _logFile();
     await _trimIfNeeded(file);
     _sink = file.openWrite(mode: FileMode.append);

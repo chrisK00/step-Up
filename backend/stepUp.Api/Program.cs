@@ -91,6 +91,14 @@ steps.MapPost(string.Empty, async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavi
     return Results.Created();
 }).WithParameterValidation();
 
+steps.MapPost("bulk", async ([FromBody(EmptyBodyBehavior = EmptyBodyBehavior.Disallow)] BulkAddDailyStepsRequest request, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
+{
+    var requestWithUserId = request with { UserId = context.GetUserId() };
+    await stepsService.BulkAddDailyStepsAsync(requestWithUserId, cancellation);
+
+    return Results.Created();
+}).WithParameterValidation();
+
 steps.MapGet(string.Empty, async ([FromQuery] DateOnly? date, HttpContext context, IStepsService stepsService, CancellationToken cancellation) =>
 {
     var dailySteps = await stepsService.GetDailyStepsAsync(context.GetUserId(), date, cancellation);

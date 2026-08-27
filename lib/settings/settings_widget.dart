@@ -45,7 +45,7 @@ class _SettingsWidgetState extends State<SettingsWidget> {
   Future<void> _shareLogs() async {
     final file = await AppLogger.getLogFile();
     SharePlus.instance.share(ShareParams(
-      files: [XFile(file.path)],
+      files: [XFile(file.path, mimeType: 'text/plain')],
       text: 'Step Up log file',
     ));
   }

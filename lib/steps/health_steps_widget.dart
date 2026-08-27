@@ -30,38 +30,58 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
   }
 
   Future<void> _initSteps() async {
-    final now = DateTime.now();
-    final isToday = _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
+    try {
+      final now = DateTime.now();
+      final isToday = _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
 
-    if (isToday) {
-      final healthSteps = await HealthHelper.getStepsFromHealth(_health);
-      final updateStepsResponse = await StepUpApiService.postSteps(healthSteps);
+      if (isToday) {
+        try {
+          final healthSteps = await HealthHelper.getStepsFromHealth(_health);
+          final updateStepsResponse = await StepUpApiService.postSteps(healthSteps);
 
-      if (updateStepsResponse == null || updateStepsResponse.statusCode != 201) {
-        safeSetState(() => _status = 'Error sending steps: ${updateStepsResponse?.statusCode}');
+          if (updateStepsResponse == null || updateStepsResponse.statusCode != 201) {
+            safeSetState(() => _status = updateStepsResponse == null
+                ? 'Could not sync steps'
+                : 'Error sending steps: ${updateStepsResponse.statusCode}');
+          } else {
+            safeSetState(() => _status = '');
+          }
+        } catch (e, st) {
+          debugPrint('Error syncing today steps: $e');
+          await AppLogger.logError(e, st);
+          safeSetState(() => _status = 'Could not sync steps');
+        }
       } else {
         safeSetState(() => _status = '');
       }
-    } else {
-      safeSetState(() => _status = '');
+
+      final results = await Future.wait([
+        StepUpApiService.getRaceLeaderboard(date: _selectedDate),
+        StepUpApiService.getReceivedReactions(),
+      ]);
+
+      safeSetState(() {
+        _players = results[0] as List<RacePlayer>;
+        _receivedReactions = results[1] as List<ReceivedReactionResponse>;
+      });
+    } catch (e, st) {
+      debugPrint('Error in _initSteps: $e');
+      await AppLogger.logError(e, st);
+      safeSetState(() => _status = 'Error loading steps');
     }
-
-    final results = await Future.wait([
-      StepUpApiService.getRaceLeaderboard(date: _selectedDate),
-      StepUpApiService.getReceivedReactions(),
-    ]);
-
-    safeSetState(() {
-      _players = results[0] as List<RacePlayer>;
-      _receivedReactions = results[1] as List<ReceivedReactionResponse>;
-    });
   }
 
   void _onPlayerTap(RacePlayer player) {
     final currentUserId = FirebaseAuth.instance.currentUser?.uid;
     final isCurrent = player.isCurrent ||
         (currentUserId != null && player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
-    if (isCurrent || !_isToday) return;
+
+    if (isCurrent) {
+      if (_receivedReactions.isNotEmpty) _showReceivedReactionsSheet();
+      return;
+    }
+
+    if (!_isToday) return;
 
     showModalBottomSheet(
       context: context,
@@ -103,6 +123,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
       _selectedDate =
           DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day).subtract(const Duration(days: 1));
       _status = 'Loading...';
+      _receivedReactions = [];
     });
     _initSteps();
   }
@@ -111,6 +132,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     safeSetState(() {
       _selectedDate = DateTime.now();
       _status = 'Loading...';
+      _receivedReactions = [];
     });
     _initSteps();
   }
@@ -175,21 +197,10 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
               itemCount: _players.length,
               itemBuilder: (context, index) {
                 final player = _players[index];
-                final currentUserId = FirebaseAuth.instance.currentUser?.uid;
-                final isCurrent = player.isCurrent ||
-                    (currentUserId != null &&
-                        player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
-
-                final int likesCount = _isToday
-                    ? (isCurrent
-                        ? (_receivedReactions.isNotEmpty ? _receivedReactions.length : player.thumbsUpCount)
-                        : player.thumbsUpCount)
-                    : 0;
 
                 return _RaceLane(
                   rank: index + 1,
                   player: player,
-                  likesCount: likesCount,
                   onTap: () => _onPlayerTap(player),
                 );
               },
@@ -245,7 +256,6 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 class _RaceLane extends StatelessWidget {
   final int rank;
   final RacePlayer player;
-  final int likesCount;
   final VoidCallback onTap;
 
   static const double _laneHeight = 90.0;
@@ -256,7 +266,6 @@ class _RaceLane extends StatelessWidget {
   const _RaceLane({
     required this.rank,
     required this.player,
-    required this.likesCount,
     required this.onTap,
   });
 
@@ -286,9 +295,12 @@ class _RaceLane extends StatelessWidget {
         ),
         child: LayoutBuilder(
         builder: (context, constraints) {
-          final double leftPosition = progress * (constraints.maxWidth - _iconSize);
+          final maxAvailableWidth = constraints.maxWidth - _iconSize;
+          final double leftPosition = progress * (maxAvailableWidth > 0 ? maxAvailableWidth : 0.0);
           const double lineTop = _laneHeight - _lineBottomOffset - _trackLineHeight;
           const double iconTop = lineTop - _iconSize;
+          final displayName = player.username.trim().isEmpty ? 'User' : player.username.trim().split(" ").first;
+          final int likesCount = player.thumbsUpCount;
 
           return Stack(
             children: [
@@ -308,7 +320,7 @@ class _RaceLane extends StatelessWidget {
                           style: DefaultTextStyle.of(context).style,
                           children: [
                             TextSpan(
-                              text: '${player.username.split(" ").first}  ',
+                              text: '$displayName  ',
                               style: const TextStyle(
                                 fontWeight: FontWeight.normal,
                                 fontSize: 18,

@@ -37,18 +37,42 @@ class StepUpApiService {
   static Future<http.Response?> postSteps(
     num totalSteps, {
     String? token,
+    String? date,
   }) async {
     try {
+      final body = <String, dynamic>{'steps': totalSteps};
+      if (date != null) body['date'] = date;
       final response = await http.post(
         await _uri('/steps'),
         headers: (await HeaderBuilder().jsonContent().authWithToken(token)).build(),
-        body: jsonEncode(<String, num>{'steps': totalSteps}),
+        body: jsonEncode(body),
       );
       return response;
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
+      return null;
+    }
+  }
+
+  /// Sends multiple step entries in a single request to POST /steps/bulk.
+  /// [entries] is a list of maps with 'steps' (int) and 'date' (yyyy-MM-dd string).
+  static Future<http.Response?> postStepsBulk(
+    List<Map<String, dynamic>> entries, {
+    String? token,
+  }) async {
+    try {
+      final response = await http.post(
+        await _uri('/steps/bulk'),
+        headers: (await HeaderBuilder().jsonContent().authWithToken(token)).build(),
+        body: jsonEncode({'entries': entries}),
+      );
+      return response;
+    } catch (e, st) {
+      Fluttertoast.showToast(msg: "ERROR: $e");
+      debugPrint('HTTP Error: $e');
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -60,10 +84,10 @@ class StepUpApiService {
         headers: (await HeaderBuilder().jsonContent().auth()).build(),
         body: jsonEncode(<String, String>{'FirstName': displayName}),
       );
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -74,10 +98,10 @@ class StepUpApiService {
       if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => DailySteps.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -90,10 +114,10 @@ class StepUpApiService {
       }
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => StepHistoryEntry.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -123,10 +147,10 @@ class StepUpApiService {
 
       all.sort((a, b) => b.steps.compareTo(a.steps));
       return all;
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return [];
     }
   }
@@ -140,10 +164,10 @@ class StepUpApiService {
       if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => UsersSearchResponse.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -157,10 +181,10 @@ class StepUpApiService {
         body: body,
       );
       Fluttertoast.showToast(msg: 'Sent friend request');
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
     }
   }
 
@@ -171,10 +195,10 @@ class StepUpApiService {
         headers: (await HeaderBuilder().jsonContent().auth()).build(),
         body: jsonEncode({"fromUserId": fromUserId}),
       );
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
     }
   }
 
@@ -182,10 +206,10 @@ class StepUpApiService {
     final headers = (await HeaderBuilder().auth()).build();
     try {
       await http.delete(await _uri('/friend-requests/$userId'), headers: headers);
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
     }
   }
 
@@ -197,10 +221,10 @@ class StepUpApiService {
       if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => FriendRequestsResponse.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -211,10 +235,10 @@ class StepUpApiService {
       if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => FriendsResponse.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -231,10 +255,10 @@ class StepUpApiService {
         Fluttertoast.showToast(msg: "Failed: ${response.statusCode} ${response.body}");
       }
       return response;
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }
@@ -251,10 +275,10 @@ class StepUpApiService {
       }
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => ReceivedReactionResponse.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return [];
     }
   }
@@ -264,10 +288,10 @@ class StepUpApiService {
     try {
       final response = await http.delete(await _uri('/friends/$userId'), headers: headers);
       Fluttertoast.showToast(msg: "removed: ${response.statusCode}");
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
     }
   }
 
@@ -277,10 +301,10 @@ class StepUpApiService {
       if (response.statusCode < 200 || response.statusCode >= 300 || response.body.trim().isEmpty) return [];
       final List<dynamic> jsonData = jsonDecode(response.body);
       return jsonData.map((e) => DailySteps.fromJson(e)).toList();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint('HTTP Error: $e');
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       return null;
     }
   }

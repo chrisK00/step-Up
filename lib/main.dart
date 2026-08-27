@@ -41,7 +41,12 @@ void callbackDispatcher() {
 
       WidgetsFlutterBinding.ensureInitialized();
       await Firebase.initializeApp(options: DefaultFirebaseOptions.android);
-      final currentUser = FirebaseAuth.instance.currentUser!;
+      final currentUser = FirebaseAuth.instance.currentUser;
+      if (currentUser == null) {
+        text += '\n No authenticated user found for background task';
+        await storage.write(key: "key", value: text);
+        return true;
+      }
 
       final idToken = await currentUser.getIdToken(true);
       text += '\n Got id token';
@@ -58,18 +63,15 @@ void callbackDispatcher() {
       await storage.write(key: "key", value: text);
       final updateStepsResponse = await StepUpApiService.postSteps(healthSteps, token: idToken);
 
-      // await storage.write(
-      //     key: "error", value: 'No Errors. Statuscode from API ${updateStepsResponse!.statusCode.toString()}');
-
       final end = DateTime.now();
       await storage.write(
           key: 'key',
           value: 'Job ran successfully. Started: $start ended $end. Ran for ${end.difference(start).inSeconds}');
-    } catch (e) {
+    } catch (e, st) {
       await storage.write(key: 'key', value: text);
       await storage.write(key: "error", value: '$start: $e');
       debugPrint("Error during $jobName, $e");
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
     }
     return true;
   });
@@ -103,12 +105,37 @@ void main() async {
 
   final currentUser = FirebaseAuth.instance.currentUser;
   if (currentUser != null) {
-    final health = Health();
-    await HealthHelper.authenticateHealth(health);
+    try {
+      final health = Health();
+      await HealthHelper.authenticateHealth(health);
 
-// For testing
-    // await Workmanager().registerOneOffTask("unique", jobName, initialDelay: Duration.zero);
-    await registerPeriodicTasks();
+      // Once per month: backfill all days from the 1st up to yesterday.
+      final now = DateTime.now();
+      final currentMonthKey =
+          '${now.year}-${now.month.toString().padLeft(2, '0')}';
+      final lastSyncedMonth = await AppSettings.getLastHistorySyncMonth();
+
+      if (lastSyncedMonth != currentMonthKey) {
+        // Fire-and-forget so startup isn't blocked. Errors are swallowed per-day
+        // inside syncMonthHistory; the key is written only on success so a
+        // partial sync will retry next startup within the same month.
+        () async {
+          try {
+            final idToken = await currentUser.getIdToken();
+            await HealthHelper.syncMonthHistory(health, token: idToken);
+            await AppSettings.setLastHistorySyncMonth(currentMonthKey);
+          } catch (e, st) {
+            debugPrint('syncMonthHistory error: $e');
+            await AppLogger.logError(e, st);
+          }
+        }();
+      }
+
+      await registerPeriodicTasks();
+    } catch (e, st) {
+      debugPrint('Startup init error: $e');
+      await AppLogger.logError(e, st);
+    }
   }
 
   runApp(const MainAppState());
@@ -138,10 +165,10 @@ class _MainAppState extends State<MainAppState> {
     try {
       await GoogleSignIn.instance.signOut();
       await FirebaseAuth.instance.signOut();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
     }
   }
 
@@ -235,7 +262,8 @@ class SignInWidget extends StatelessWidget {
 
       // TODO add username select screen and handle username is taken / error messages
       final currentUser = FirebaseAuth.instance.currentUser;
-      final signUpResult = await StepUpApiService.signUp(currentUser!.displayName!);
+      final displayName = currentUser?.displayName ?? currentUser?.email ?? 'User';
+      final signUpResult = await StepUpApiService.signUp(displayName);
 
       if (signUpResult != null && signUpResult.statusCode > 400) {
         Fluttertoast.showToast(msg: "${signUpResult.reasonPhrase}");
@@ -247,10 +275,10 @@ class SignInWidget extends StatelessWidget {
       final health = Health();
       await HealthHelper.authenticateHealth(health);
       await registerPeriodicTasks();
-    } catch (e) {
+    } catch (e, st) {
       Fluttertoast.showToast(msg: "ERROR: $e");
       debugPrint("ERROR: $e");
-      await AppLogger.logError(e);
+      await AppLogger.logError(e, st);
       _firebaseAuth.signOut();
       await _googleSignIn.signOut();
     }

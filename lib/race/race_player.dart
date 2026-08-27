@@ -37,13 +37,22 @@ class RacePlayer {
   }
 
   factory RacePlayer.fromJson(Map<String, dynamic> json, {bool isCurrent = false}) {
-    final steps = json['steps'] as int? ?? 0;
-    final thumbsUpCount = (json['thumbsUpCount'] ?? json['ThumbsUpCount'] ?? 0) as int;
-    final hasSentThumbsUp = (json['hasSentThumbsUp'] ?? json['HasSentThumbsUp'] ?? false) as bool;
+    final steps = ((json['steps'] ?? json['Steps'] ?? 0) as num).toInt();
+    final thumbsUpCount = ((json['thumbsUpCount'] ?? json['ThumbsUpCount'] ?? 0) as num).toInt();
+    final hasSentThumbsUp = (json['hasSentThumbsUp'] ?? json['HasSentThumbsUp'] ?? false) == true;
+
+    final userId = (json['userId'] ?? json['UserId'] ?? json['id'] ?? json['Id'] ?? '').toString();
+    final username = (json['firstName'] ??
+            json['FirstName'] ??
+            json['username'] ??
+            json['Username'] ??
+            json['name'] ??
+            'User')
+        .toString();
 
     return RacePlayer(
-      userId: json['userId'] as String,
-      username: json['firstName'] as String,
+      userId: userId,
+      username: username,
       steps: steps,
       color: getTierColor(steps),
       isCurrent: isCurrent,

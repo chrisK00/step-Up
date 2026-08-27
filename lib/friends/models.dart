@@ -6,8 +6,8 @@ class UsersSearchResponse {
 
   factory UsersSearchResponse.fromJson(Map<String, dynamic> json) {
     return UsersSearchResponse(
-      username: json['username'],
-      id: json["id"],
+      username: (json['username'] ?? json['Username'] ?? json['firstName'] ?? '').toString(),
+      id: (json['id'] ?? json['Id'] ?? json['userId'] ?? '').toString(),
     );
   }
 }
@@ -27,12 +27,20 @@ class FriendRequestsResponse {
       required this.sentDateTime});
 
   factory FriendRequestsResponse.fromJson(Map<String, dynamic> json) {
+    final rawDate = json['sentDateTime'] ?? json['SentDateTime'];
+    DateTime parsedDate;
+    if (rawDate != null) {
+      parsedDate = DateTime.tryParse(rawDate.toString()) ?? DateTime.now();
+    } else {
+      parsedDate = DateTime.now();
+    }
+
     return FriendRequestsResponse(
-      fromUserId: json['fromUserId'],
-      toUserId: json["toUserId"],
-      fromUsername: json["fromUsername"],
-      toUsername: json["toUsername"],
-      sentDateTime: DateTime.parse(json["sentDateTime"]),
+      fromUserId: (json['fromUserId'] ?? json['FromUserId'] ?? '').toString(),
+      toUserId: (json['toUserId'] ?? json['ToUserId'] ?? '').toString(),
+      fromUsername: (json['fromUsername'] ?? json['FromUsername'] ?? '').toString(),
+      toUsername: (json['toUsername'] ?? json['ToUsername'] ?? '').toString(),
+      sentDateTime: parsedDate,
     );
   }
 }
@@ -45,8 +53,8 @@ class FriendsResponse {
 
   factory FriendsResponse.fromJson(Map<String, dynamic> json) {
     return FriendsResponse(
-      id: json['userId'],
-      username: json["firstName"],
+      id: (json['userId'] ?? json['UserId'] ?? json['id'] ?? '').toString(),
+      username: (json['firstName'] ?? json['FirstName'] ?? json['username'] ?? '').toString(),
     );
   }
 }
@@ -58,7 +66,7 @@ class ReceivedReactionResponse {
 
   factory ReceivedReactionResponse.fromJson(Map<String, dynamic> json) {
     return ReceivedReactionResponse(
-      fromUsername: (json['fromUsername'] ?? json['FromUsername'] ?? '') as String,
+      fromUsername: (json['fromUsername'] ?? json['FromUsername'] ?? '').toString(),
     );
   }
 }
