@@ -4,6 +4,8 @@ import 'package:step_up/app_logger.dart';
 import 'package:step_up/app_settings.dart';
 
 class SettingsWidget extends StatefulWidget {
+  const SettingsWidget({super.key});
+
   @override
   State<SettingsWidget> createState() => _SettingsWidgetState();
 }

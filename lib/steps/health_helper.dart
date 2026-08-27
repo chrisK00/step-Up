@@ -1,5 +1,7 @@
+import 'package:flutter/foundation.dart';
 import 'package:health/health.dart';
 import 'package:permission_handler/permission_handler.dart';
+import 'package:step_up/app_logger.dart';
 import 'package:step_up/app_settings.dart';
 import 'package:step_up/step_up_api_service.dart';
 

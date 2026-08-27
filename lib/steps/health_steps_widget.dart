@@ -1,6 +1,7 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
+import 'package:step_up/app_logger.dart';
 import 'package:step_up/friends/models.dart';
 import 'package:step_up/race/race_player.dart';
 import 'package:step_up/step_up_api_service.dart';
@@ -77,7 +78,7 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
         (currentUserId != null && player.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase());
 
     if (isCurrent) {
-      if (_receivedReactions.isNotEmpty) _showReceivedReactionsSheet();
+      _showReceivedReactionsSheet(player.username);
       return;
     }
 
@@ -98,12 +99,15 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
     );
   }
 
-  void _showReceivedReactionsSheet() {
+  void _showReceivedReactionsSheet(String username) {
     showModalBottomSheet(
       context: context,
       useSafeArea: true,
       isScrollControlled: true,
-      builder: (ctx) => _ReceivedReactionsSheet(reactions: _receivedReactions),
+      builder: (ctx) => _ReceivedReactionsSheet(
+        username: username,
+        reactions: _receivedReactions,
+      ),
     );
   }
 
@@ -156,32 +160,6 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
                   style: Theme.of(context).textTheme.titleMedium,
                 ),
               ),
-              if (_isToday && _receivedReactions.isNotEmpty)
-                GestureDetector(
-                  onTap: _showReceivedReactionsSheet,
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                    decoration: BoxDecoration(
-                      color: const Color.fromARGB(255, 255, 243, 204),
-                      borderRadius: BorderRadius.circular(20),
-                    ),
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.thumb_up, size: 16, color: Colors.amber),
-                        const SizedBox(width: 4),
-                        Text(
-                          '${_receivedReactions.length}',
-                          style: const TextStyle(
-                            fontSize: 13,
-                            fontWeight: FontWeight.w600,
-                            color: Color.fromARGB(255, 179, 116, 0),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
               if (_status.isNotEmpty) ...[
                 const SizedBox(width: 8),
                 Text(_status),
@@ -339,26 +317,27 @@ class _RaceLane extends StatelessWidget {
                     ),
                     if (likesCount > 0) ...[
                       const SizedBox(width: 6),
-                      Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          const Icon(
-                            Icons.thumb_up,
-                            size: 24,
-                            color: Colors.amber,
-                          ),
-                          if (likesCount > 1) ...[
-                            const SizedBox(width: 3),
+                      Container(
+                        padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
+                        decoration: BoxDecoration(
+                          color: const Color.fromARGB(255, 255, 243, 204),
+                          borderRadius: BorderRadius.circular(20),
+                        ),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            const Icon(Icons.thumb_up, size: 16, color: Colors.amber),
+                            const SizedBox(width: 4),
                             Text(
-                              '($likesCount)',
+                              '$likesCount',
                               style: const TextStyle(
-                                fontSize: 14,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.amber,
+                                fontSize: 13,
+                                fontWeight: FontWeight.w600,
+                                color: Color.fromARGB(255, 179, 116, 0),
                               ),
                             ),
                           ],
-                        ],
+                        ),
                       ),
                     ],
                   ],
@@ -472,9 +451,13 @@ class _ThumbsUpSheetState extends State<_ThumbsUpSheet> {
 }
 
 class _ReceivedReactionsSheet extends StatelessWidget {
+  final String username;
   final List<ReceivedReactionResponse> reactions;
 
-  const _ReceivedReactionsSheet({required this.reactions});
+  const _ReceivedReactionsSheet({
+    required this.username,
+    required this.reactions,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -494,42 +477,49 @@ class _ReceivedReactionsSheet extends StatelessWidget {
               borderRadius: BorderRadius.circular(2),
             ),
           ),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.center,
-            children: [
-              const Icon(Icons.thumb_up, size: 20, color: Colors.amber),
-              const SizedBox(width: 8),
-              Text('Liked today', style: theme.textTheme.titleLarge),
-            ],
+          Text(
+            username.trim().isEmpty ? 'Your Likes' : username,
+            style: theme.textTheme.titleLarge,
           ),
           const SizedBox(height: 20),
-          Flexible(
-            child: SingleChildScrollView(
-              child: Column(
-                mainAxisSize: MainAxisSize.min,
-                children: reactions
-                    .map(
-                      (r) => Padding(
-                        padding: const EdgeInsets.symmetric(vertical: 6),
-                        child: Row(
-                          mainAxisAlignment: MainAxisAlignment.center,
-                          children: [
-                            const Icon(Icons.person, size: 20, color: Colors.grey),
-                            const SizedBox(width: 8),
-                            Text(
-                              r.fromUsername,
-                              style: theme.textTheme.bodyLarge?.copyWith(
-                                fontWeight: FontWeight.w500,
+          if (reactions.isEmpty)
+            Padding(
+              padding: const EdgeInsets.symmetric(vertical: 8),
+              child: Text(
+                'No likes received yet today',
+                style: theme.textTheme.bodyMedium?.copyWith(
+                  color: Colors.grey.shade600,
+                ),
+              ),
+            )
+          else
+            Flexible(
+              child: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: reactions
+                      .map(
+                        (r) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 6),
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              const Icon(Icons.thumb_up, size: 18, color: Colors.amber),
+                              const SizedBox(width: 8),
+                              Text(
+                                r.fromUsername,
+                                style: theme.textTheme.bodyLarge?.copyWith(
+                                  fontWeight: FontWeight.w500,
+                                ),
                               ),
-                            ),
-                          ],
+                            ],
+                          ),
                         ),
-                      ),
-                    )
-                    .toList(),
+                      )
+                      .toList(),
+                ),
               ),
             ),
-          ),
           const SizedBox(height: 16),
         ],
       ),

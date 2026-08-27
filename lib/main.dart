@@ -6,6 +6,7 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
 import 'package:step_up/app_logger.dart';
+import 'package:step_up/app_settings.dart';
 import 'package:step_up/achievements/achievements_page.dart';
 import 'package:step_up/firebase_options.dart';
 import 'package:step_up/friends/friends_widget.dart';
@@ -61,7 +62,7 @@ void callbackDispatcher() {
 
       text += '\n  Sending Steps: $healthSteps';
       await storage.write(key: "key", value: text);
-      final updateStepsResponse = await StepUpApiService.postSteps(healthSteps, token: idToken);
+      await StepUpApiService.postSteps(healthSteps, token: idToken);
 
       final end = DateTime.now();
       await storage.write(
@@ -158,7 +159,7 @@ class _MainAppState extends State<MainAppState> {
     const HealthStepsWidget(),
     const FriendsWidgetState(),
     const AchievementsPage(),
-    SettingsWidget(),
+    const SettingsWidget(),
   ];
 
   Future signOut() async {
@@ -202,7 +203,7 @@ class _MainAppState extends State<MainAppState> {
                     if (userSnapshot.hasData)
                       ElevatedButton.icon(
                         label: const Text("Sign Out"),
-                        icon: const Icon(FontAwesomeIcons.signOut),
+                        icon: const Icon(FontAwesomeIcons.arrowRightFromBracket),
                         onPressed: signOut,
                       )
                   ],

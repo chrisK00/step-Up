@@ -132,13 +132,13 @@ class StepUpApiService {
         http.get(await _uri('/steps/friends$dateQuery'), headers: headers),
       ]);
 
-      List<dynamic> _decodeList(http.Response r) =>
+      List<dynamic> decodeList(http.Response r) =>
           (r.statusCode >= 200 && r.statusCode < 300 && r.body.trim().isNotEmpty)
               ? jsonDecode(r.body) as List<dynamic>
               : [];
 
-      final ownJson = _decodeList(results[0]);
-      final friendsJson = _decodeList(results[1]);
+      final ownJson = decodeList(results[0]);
+      final friendsJson = decodeList(results[1]);
 
       final all = [
         ...ownJson.map((e) => RacePlayer.fromJson(e, isCurrent: true)),
