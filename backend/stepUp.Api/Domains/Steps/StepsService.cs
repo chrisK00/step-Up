@@ -28,7 +28,12 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 
     public async Task BulkAddDailyStepsAsync(BulkAddDailyStepsRequest request, CancellationToken cancellation)
     {
-        var dates = request.Entries.Select(e => e.Date).ToList();
+        var distinctEntries = request.Entries
+            .GroupBy(e => e.Date)
+            .Select(g => g.Last())
+            .ToList();
+
+        var dates = distinctEntries.Select(e => e.Date).ToList();
 
         var existing = await dbContext.DailyStepEntries
             .Where(x => x.UserId == request.UserId && dates.Contains(x.Date))
@@ -36,7 +41,7 @@ public class StepsService(AppDbContext dbContext, IUnitOfWork unitOfWork) : ISte
 
         var existingByDate = existing.ToDictionary(x => x.Date);
 
-        foreach (var entry in request.Entries)
+        foreach (var entry in distinctEntries)
         {
             if (existingByDate.TryGetValue(entry.Date, out var row))
             {

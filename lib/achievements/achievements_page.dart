@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
+import 'package:health/health.dart';
 import 'package:step_up/step_up_api_service.dart';
+import 'package:step_up/steps/health_helper.dart';
 import 'package:step_up/steps/step_history_entry.dart';
 
 abstract class AchievementColors {
@@ -36,10 +38,43 @@ class _AchievementsPageState extends State<AchievementsPage> {
   }
 
   Future<void> _load() async {
-    final history = await StepUpApiService.getStepHistory();
+    var history = await StepUpApiService.getStepHistory() ?? [];
+
+    final now = DateTime.now();
+    final existingDaysThisMonth = history
+        .where((e) => e.date.year == now.year && e.date.month == now.month)
+        .map((e) => e.date.day)
+        .toSet();
+
+    final missingDays = <int>[];
+    for (int day = 1; day < now.day; day++) {
+      if (!existingDaysThisMonth.contains(day)) {
+        missingDays.add(day);
+      }
+    }
+
+    if (missingDays.isNotEmpty) {
+      try {
+        final health = Health();
+        final hasPermissions =
+            await health.hasPermissions([HealthDataType.STEPS], permissions: [HealthDataAccess.READ]);
+        if (hasPermissions == true) {
+          final hasSynced = await HealthHelper.syncMissingDays(health, now.year, now.month, missingDays);
+          if (hasSynced) {
+            final reloaded = await StepUpApiService.getStepHistory();
+            if (reloaded != null) {
+              history = reloaded;
+            }
+          }
+        }
+      } catch (e) {
+        debugPrint('Error syncing missing history days: $e');
+      }
+    }
+
     if (!mounted) return;
     setState(() {
-      _history = history ?? [];
+      _history = history;
       _loading = false;
     });
   }

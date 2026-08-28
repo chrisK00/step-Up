@@ -6,7 +6,6 @@ import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:health/health.dart';
 import 'package:step_up/app_logger.dart';
-import 'package:step_up/app_settings.dart';
 import 'package:step_up/achievements/achievements_page.dart';
 import 'package:step_up/firebase_options.dart';
 import 'package:step_up/friends/friends_widget.dart';
@@ -109,29 +108,6 @@ void main() async {
     try {
       final health = Health();
       await HealthHelper.authenticateHealth(health);
-
-      // Once per month: backfill all days from the 1st up to yesterday.
-      final now = DateTime.now();
-      final currentMonthKey =
-          '${now.year}-${now.month.toString().padLeft(2, '0')}';
-      final lastSyncedMonth = await AppSettings.getLastHistorySyncMonth();
-
-      if (lastSyncedMonth != currentMonthKey) {
-        // Fire-and-forget so startup isn't blocked. Errors are swallowed per-day
-        // inside syncMonthHistory; the key is written only on success so a
-        // partial sync will retry next startup within the same month.
-        () async {
-          try {
-            final idToken = await currentUser.getIdToken();
-            await HealthHelper.syncMonthHistory(health, token: idToken);
-            await AppSettings.setLastHistorySyncMonth(currentMonthKey);
-          } catch (e, st) {
-            debugPrint('syncMonthHistory error: $e');
-            await AppLogger.logError(e, st);
-          }
-        }();
-      }
-
       await registerPeriodicTasks();
     } catch (e, st) {
       debugPrint('Startup init error: $e');

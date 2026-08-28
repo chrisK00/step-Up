@@ -40,8 +40,10 @@ class StepUpApiService {
     String? date,
   }) async {
     try {
-      final body = <String, dynamic>{'steps': totalSteps};
-      if (date != null) body['date'] = date;
+      final now = DateTime.now();
+      final effectiveDate = date ??
+          '${now.year}-${now.month.toString().padLeft(2, '0')}-${now.day.toString().padLeft(2, '0')}';
+      final body = <String, dynamic>{'steps': totalSteps, 'date': effectiveDate};
       final response = await http.post(
         await _uri('/steps'),
         headers: (await HeaderBuilder().jsonContent().authWithToken(token)).build(),

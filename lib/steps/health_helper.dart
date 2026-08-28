@@ -72,18 +72,20 @@ class HealthHelper {
     }
   }
 
-  /// Reads steps for each day from the 1st of the current month up to (but not
-  /// including) today, then POSTs all days in a single bulk request. Today's
-  /// steps are excluded because the regular background/foreground sync handles today.
-  static Future<void> syncMonthHistory(Health health, {String? token}) async {
+  /// Reads steps for the specified missing days from Health Connect and bulk POSTs them.
+  static Future<bool> syncMissingDays(
+    Health health,
+    int year,
+    int month,
+    List<int> days, {
+    String? token,
+  }) async {
     try {
-      final now = DateTime.now();
+      if (days.isEmpty) return false;
       final sourceName = await AppSettings.getHealthSourceName();
 
-      final entries = <Map<String, dynamic>>[];
-
-      for (int day = 1; day < now.day; day++) {
-        final date = DateTime(now.year, now.month, day);
+      final results = await Future.wait(days.map((day) async {
+        final date = DateTime(year, month, day);
         final startOfDay = DateTime(date.year, date.month, date.day, 0, 0, 0);
         final endOfDay = DateTime(date.year, date.month, date.day, 23, 59, 59);
 
@@ -105,20 +107,20 @@ class HealthHelper {
           return sum;
         });
 
-        // Skip days with zero steps to avoid cluttering the DB with empty rows.
-        if (steps <= 0) continue;
-
         final dateStr =
             '${date.year}-${date.month.toString().padLeft(2, '0')}-${date.day.toString().padLeft(2, '0')}';
-        entries.add({'steps': steps.toInt(), 'date': dateStr});
-      }
+        return {'steps': steps.toInt(), 'date': dateStr};
+      }));
 
-      if (entries.isEmpty) return;
+      final entries = results.where((e) => (e['steps'] as int) > 0).toList();
+      if (entries.isEmpty) return false;
 
-      await StepUpApiService.postStepsBulk(entries, token: token);
+      final res = await StepUpApiService.postStepsBulk(entries, token: token);
+      return res != null && res.statusCode >= 200 && res.statusCode < 300;
     } catch (e, st) {
-      debugPrint('syncMonthHistory error: $e');
+      debugPrint('syncMissingDays error: $e');
       await AppLogger.logError(e, st);
+      return false;
     }
   }
 }

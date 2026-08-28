@@ -2,6 +2,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:health/health.dart';
 import 'package:step_up/app_logger.dart';
+import 'package:step_up/app_settings.dart';
 import 'package:step_up/friends/models.dart';
 import 'package:step_up/race/race_player.dart';
 import 'package:step_up/step_up_api_service.dart';
@@ -32,13 +33,13 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
 
   Future<void> _initSteps() async {
     try {
-      final now = DateTime.now();
-      final isToday = _selectedDate.year == now.year && _selectedDate.month == now.month && _selectedDate.day == now.day;
+      final dateStr =
+          '${_selectedDate.year}-${_selectedDate.month.toString().padLeft(2, '0')}-${_selectedDate.day.toString().padLeft(2, '0')}';
 
-      if (isToday) {
+      if (_isToday) {
         try {
           final healthSteps = await HealthHelper.getStepsFromHealth(_health);
-          final updateStepsResponse = await StepUpApiService.postSteps(healthSteps);
+          final updateStepsResponse = await StepUpApiService.postSteps(healthSteps, date: dateStr);
 
           if (updateStepsResponse == null || updateStepsResponse.statusCode != 201) {
             safeSetState(() => _status = updateStepsResponse == null
@@ -56,14 +57,61 @@ class _HealthStepsWidgetState extends State<HealthStepsWidget> {
         safeSetState(() => _status = '');
       }
 
-      final results = await Future.wait([
+      var results = await Future.wait([
         StepUpApiService.getRaceLeaderboard(date: _selectedDate),
         StepUpApiService.getReceivedReactions(),
       ]);
 
+      var players = results[0] as List<RacePlayer>;
+      final reactions = results[1] as List<ReceivedReactionResponse>;
+
+      if (!_isToday) {
+        final currentUserId = FirebaseAuth.instance.currentUser?.uid;
+        final currentPlayer = players.cast<RacePlayer?>().firstWhere(
+          (p) =>
+              p != null &&
+              (p.isCurrent ||
+                  (currentUserId != null &&
+                      p.userId.trim().toLowerCase() == currentUserId.trim().toLowerCase())),
+          orElse: () => null,
+        );
+
+        if (currentPlayer == null || currentPlayer.steps == 0) {
+          try {
+            final startOfDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 0, 0, 0);
+            final endOfDay = DateTime(_selectedDate.year, _selectedDate.month, _selectedDate.day, 23, 59, 59);
+            final healthData = await _health.getHealthDataFromTypes(
+              types: [HealthDataType.STEPS],
+              startTime: startOfDay,
+              endTime: endOfDay,
+            );
+            final sourceName = await AppSettings.getHealthSourceName();
+            final steps = healthData.fold<num>(0, (sum, point) {
+              final value = point.value;
+              final pointSourceName = point.sourceName;
+              final matchesSource = sourceName.trim().isEmpty ||
+                  pointSourceName.toLowerCase().contains(sourceName.trim().toLowerCase());
+
+              if (matchesSource && value is NumericHealthValue) {
+                return sum + value.numericValue;
+              }
+              return sum;
+            });
+
+            if (steps > 0) {
+              await StepUpApiService.postSteps(steps, date: dateStr);
+              players = await StepUpApiService.getRaceLeaderboard(date: _selectedDate);
+            }
+          } catch (e, st) {
+            debugPrint('Error syncing missing past day steps: $e');
+            await AppLogger.logError(e, st);
+          }
+        }
+      }
+
       safeSetState(() {
-        _players = results[0] as List<RacePlayer>;
-        _receivedReactions = results[1] as List<ReceivedReactionResponse>;
+        _players = players;
+        _receivedReactions = reactions;
       });
     } catch (e, st) {
       debugPrint('Error in _initSteps: $e');
